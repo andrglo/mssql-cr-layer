@@ -1,0 +1,43 @@
+{
+  "name": "mssql-cr-layer",
+  "version": "0.0.0",
+  "description": "A MS SQL Server interface layer for common requests",
+  "homepage": "",
+  "repository": "andrglo/mssql-cr-layer",
+  "author": {
+    "name": "Andre Gloria",
+    "email": "andredagloria@gmail.com",
+    "url": "andrglo.com"
+  },
+  "files": [
+    "src"
+  ],
+  "main": "src/index.js",
+  "keywords": [
+    "SQL Server",
+    "mssql",
+    "promise",
+    "sql",
+    "common",
+    "requests",
+    "interface"
+  ],
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "gulp": "^3.6.0",
+    "gulp-coveralls": "^0.1.0",
+    "gulp-eslint": "^0.15.0",
+    "gulp-istanbul": "^0.9.0",
+    "gulp-mocha": "^2.0.0",
+    "gulp-nsp": "^0.4.5"
+  },
+  "scripts": {
+    "prepublish": "gulp prepublish",
+    "test": "gulp"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^2.2.0",
+    "mssql": "^2.2.0"
+  }
+}
