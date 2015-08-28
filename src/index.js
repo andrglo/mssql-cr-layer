@@ -155,17 +155,11 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       ps = new mssql.PreparedStatement(connection);
       Object.keys(params).forEach(function(key) {
         var param = params[key];
+        debug('input', key, param);
         input[key] = param.value || param;
-        var type = mssql.NVarChar;
-        if (param.type === void 0) {
-          if (param instanceof Date) {
-            type = mssql.DateTime2;
-          } else if (typeof param === 'number') {
-            type = mssql.Numeric;
-          }
-        }
-        ps.input(key, param.type || type);
+        ps.input(key, getType(param));
       });
+      debug('params typed');
     })
     .then(function() {
       return ps.prepare(statement);
@@ -204,5 +198,42 @@ MssqlCrLayer.prototype.close = function() {
 MssqlCrLayer.prototype.wrap = function(identifier) {
   return this.delimiters[0] + identifier + this.delimiters[1];
 };
+
+function getType(param) {
+  var type = mssql.NVarChar;
+  debug('from type', param);
+  if (param.type === void 0) {
+    if (param instanceof Date) {
+      type = mssql.DateTime2;
+    } else if (typeof param === 'number') {
+      type = mssql.Decimal;
+    }
+  } else {
+    switch (param.type) {
+      case 'integer':
+        type = mssql.Int;
+        break;
+      case 'number':
+        type = mssql.Decimal(param.maxLength, param.decimals);
+        break;
+      case 'date':
+        type = mssql.Date;
+        break;
+      case 'datetime':
+        if (property.timezone === 'ignore') {
+          type = mssql.DateTime2;
+        } else {
+          type = mssql.DateTimeOffset;
+        }
+        break;
+      case 'string':
+        if (param.maxLength) {
+          type = mssql.NVarChar(param.maxLength);
+        }
+    }
+  }
+  debug('to type', type);
+  return type;
+}
 
 

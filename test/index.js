@@ -128,7 +128,7 @@ describe('mssql cr layer', function() {
     layer1.execute('CREATE TABLE products ( ' +
       'product_no integer, ' +
       'name varchar(10), ' +
-      'price numeric )')
+      'price numeric(12,2) )')
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
@@ -355,7 +355,7 @@ describe('mssql cr layer', function() {
   it('should insert date and time', function(done) {
     layer2.execute('INSERT INTO products ' +
       'VALUES ($1, $2, $3, $4, $5, $6)', [1, 'Cheese', 59.99,
-      now,
+      now.toISOString().substr(0, 10),
       now,
       now])
       .then(function() {
@@ -469,6 +469,58 @@ describe('mssql cr layer', function() {
         done();
       })
       .catch(done);
+  });
+  it('should use the exact type in object format in layer 1', function(done) {
+    layer1.execute('INSERT INTO products ' +
+      'VALUES (@product_no, @name, @price)', {
+      name: {
+        value: 'Iron',
+        type: 'string',
+        maxLength: 10
+      },
+      product_no: {
+        value: 5,
+        type: 'integer'
+      },
+      price: {
+        value: 0.99,
+        type: 'number',
+        maxLength: 12,
+        decimals: 2
+      }
+    }).then(function(res) {
+      expect(res).to.be.a('array');
+      expect(res.length).to.equal(0);
+      done();
+    }).catch(function(error) {
+      done(error);
+    })
+  });
+  it('should use the exact type in array format in layer 1', function(done) {
+    layer1.execute('INSERT INTO products ' +
+      'VALUES ($1, $2, $3)', [
+      {
+        value: 5,
+        type: 'integer'
+      },
+      {
+        value: 'Iron',
+        type: 'string',
+        maxLength: 10
+      },
+      {
+        value: 0.99,
+        type: 'number',
+        maxLength: 12,
+        decimals: 2
+      }
+    ]).then(function(res) {
+      expect(res).to.be.a('array');
+      expect(res.length).to.equal(0);
+      done();
+    }).catch(function(error) {
+      done(error);
+    })
   });
   after(function(done) {
     layer0.close()
