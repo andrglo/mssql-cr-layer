@@ -89,7 +89,10 @@ MssqlCrLayer.prototype.transaction = function(fn) {
  */
 MssqlCrLayer.prototype.batch = function(script, options) {
   return (new mssql.Request((options && options.transaction) || this.connection))
-    .batch(script);
+    .batch(script)
+    .then(function(recordset) {
+      return recordset || [];
+    })
 };
 
 /**
@@ -120,67 +123,69 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
 
   var connection = (options && options.transaction) || this.connection;
   if (params === void 0 || params === null) {
-    return (new mssql.Request(connection)).query(statement);
+    return (new mssql.Request(connection)).query(statement)
+      .then(function(recordset) {
+        return recordset || [];
+      });
   }
 
   var convertParams = function() {
     if (Array.isArray(params)) {
-      var match = statement.match(/($\w*\b)/g);
+      var match = statement.match(/(\$\w*\b)/g);
       assert(Array.isArray(match), 'No parameter is defined in statement');
-      assert(match.length === Object.keys(params).length, 'Parameters in statement ' +
+      assert(match.length === params.length, 'Parameters in statement ' +
         'not match parameters in object params');
       debug(match);
-      var i = 1;
-      params = match.map(function(param) {
-        statement = statement.replace(param, '$' + i);
-        i++;
+      var paramsObj = {};
+      match.map(function(param) {
         var key = param.substr(1);
-        assert(params[key], 'Parameter ' + param + ' not found in object params');
-        return params[key];
+        paramsObj['p' + key] = params[Number(key) - 1];
+        statement = statement.replace(param, '@p' + key);
       });
+      params = paramsObj;
       debug('params converted', statement, params);
     }
   };
 
-  convertParams();
-
+  var ps;
   var input = {};
-  var ps = new mssql.PreparedStatement(connection);
-  Object.keys(params).forEach(function(key) {
-    key = key.substr(1);
-    var type;
-    var value = params[key];
-    if (value instanceof Date) {
-      type =
-    }
-    switch (typeof params[key]) {
-      case 'number':
-
-    }
-    ps.input(key, type);
-  });
-
-  return ps.prepare(insertCommand)
+  return Promise.resolve()
     .then(function() {
-      return ps.execute(save);
-    })
-    .then(function(recordset) {
-      return ps.unprepare().then(function() {
-        fieldsToRead.map(function(data) {
-          record[data.to] = recordset[0][data.from]
-        });
-        _.forEach(defaultValues, function(value, key) {
-          record[key] = value;
-        });
-        return record;
+      convertParams();
+      ps = new mssql.PreparedStatement(connection);
+      Object.keys(params).forEach(function(key) {
+        var param = params[key];
+        input[key] = param.value || param;
+        var type = mssql.NVarChar;
+        if (param.type === void 0) {
+          if (param instanceof Date) {
+            type = mssql.DateTime2;
+          } else if (typeof param === 'number') {
+            type = mssql.Numeric;
+          }
+        }
+        ps.input(key, param.type || type);
       });
     })
-    .catch(function(error) {
-      return ps.unprepare().then(function() {
-        throw error;
-      });
+    .then(function() {
+      return ps.prepare(statement);
+    })
+    .then(function() {
+      debug('prepared');
+      return ps.execute(input)
+        .then(function(recordset) {
+          debug('executed');
+          return ps.unprepare().then(function() {
+            return recordset || [];
+          });
+        })
+        .catch(function(error) {
+          debug('catch', statement, error);
+          return ps.unprepare().then(function() {
+            throw error;
+          });
+        });
     });
-
 };
 
 /**
