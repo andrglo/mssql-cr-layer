@@ -92,7 +92,7 @@ MssqlCrLayer.prototype.batch = function(script, options) {
     .batch(script)
     .then(function(recordset) {
       return recordset || [];
-    })
+    });
 };
 
 /**
@@ -214,13 +214,13 @@ function getType(param) {
         type = mssql.Int;
         break;
       case 'number':
-        type = mssql.Decimal(param.maxLength, param.decimals);
+        type = new mssql.Decimal(param.maxLength, param.decimals);
         break;
       case 'date':
         type = mssql.Date;
         break;
       case 'datetime':
-        if (property.timezone === 'ignore') {
+        if (param.timezone === 'ignore') {
           type = mssql.DateTime2;
         } else {
           type = mssql.DateTimeOffset;
@@ -228,7 +228,7 @@ function getType(param) {
         break;
       case 'string':
         if (param.maxLength) {
-          type = mssql.NVarChar(param.maxLength);
+          type = new mssql.NVarChar(param.maxLength);
         }
     }
   }
