@@ -156,8 +156,13 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       Object.keys(params).forEach(function(key) {
         var param = params[key];
         debug('input', key, param);
-        input[key] = (param && param.value) || param;
-        ps.input(key, getType(param));
+        if (typeof param === 'object' && !(param instanceof Date)) {
+          input[key] = param && param.value || null;
+          ps.input(key, getType(input[key], param));
+        } else {
+          input[key] = param || null;
+          ps.input(key, getType(input[key]));
+        }
       });
       debug('params typed');
     })
@@ -199,19 +204,10 @@ MssqlCrLayer.prototype.wrap = function(identifier) {
   return this.delimiters[0] + identifier + this.delimiters[1];
 };
 
-function getType(param) {
+function getType(value, param) {
   var type = mssql.NVarChar;
-  if (param === void 0 || param === null) {
-    return type;
-  }
-  debug('from type', param);
-  if (param.type === void 0) {
-    if (param instanceof Date) {
-      type = mssql.DateTime2;
-    } else if (typeof param === 'number') {
-      type = mssql.Decimal;
-    }
-  } else {
+  debug('from type', value, param);
+  if (param && param.type) {
     switch (param.type) {
       case 'integer':
         type = mssql.Int;
@@ -233,6 +229,12 @@ function getType(param) {
         if (param.maxLength) {
           type = new mssql.NVarChar(param.maxLength);
         }
+    }
+  } else {
+    if (value instanceof Date) {
+      type = mssql.DateTime2;
+    } else if (typeof value === 'number') {
+      type = mssql.Decimal;
     }
   }
   debug('to type', type);
