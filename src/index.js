@@ -156,7 +156,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       Object.keys(params).forEach(function(key) {
         var param = params[key];
         debug('input', key, param);
-        input[key] = param.value || param;
+        input[key] = (param && param.value) || param;
         ps.input(key, getType(param));
       });
       debug('params typed');
@@ -201,6 +201,9 @@ MssqlCrLayer.prototype.wrap = function(identifier) {
 
 function getType(param) {
   var type = mssql.NVarChar;
+  if (param === void 0 || param === null) {
+    return type;
+  }
   debug('from type', param);
   if (param.type === void 0) {
     if (param instanceof Date) {
