@@ -160,6 +160,9 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           ps.input(key, getType(input[key], param));
         } else {
           input[key] = param || null;
+          if (input[key] instanceof Date) { // Fix mssql precision
+            input[key] = input[key].toISOString().substring(0, 23) + '000';
+          }
           ps.input(key, getType(input[key]));
         }
       });
