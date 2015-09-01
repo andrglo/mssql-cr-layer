@@ -167,6 +167,33 @@ describe('mssql cr layer', function() {
       })
       .catch(done);
   });
+  it('you can pass a empty params array', function(done) {
+    layer1.query('SELECT * FROM products', [])
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
+  it('you can pass a empty params object', function(done) {
+    layer1.query('SELECT * FROM products', {})
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
+  it('you can pass a params object with extra data', function(done) {
+    layer1.query('SELECT * FROM products', {notuseful: false})
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
   it('should create the two records when the transaction is ok in layer 1', function(done) {
     layer1
       .transaction(function(t) {
@@ -193,7 +220,7 @@ describe('mssql cr layer', function() {
       })
       .catch(done);
   });
-  it('should create more one records when no transaction and a fail occurs in layer 1', function(done) {
+  it('should create more one record when no transaction and a fail occurs in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
       'VALUES (3, \'Wine\', 99.99)')
       .then(function() {
@@ -294,14 +321,14 @@ describe('mssql cr layer', function() {
       })
       .catch(done);
   });
-  it('should reject due parameters length not match in layer 1', function(done) {
+  it('should reject due less parameters needed in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
-      'VALUES ($1, $2, $3)', ['Duck', 5, '', 0.99])
+      'VALUES ($1, $2, $3)', ['Duck', 5])
       .then(function() {
         done(new Error('No error?'));
       })
       .catch(function(error) {
-        expect(error.message.indexOf('not match parameters') !== -1).to.equal(true);
+        expect(error.message.indexOf('more parameters') !== -1).to.equal(true);
         done();
       })
       .catch(done);
@@ -314,27 +341,21 @@ describe('mssql cr layer', function() {
       price: 0.99
     }).then(function() {
       done(new Error('No error?'));
-    })
-      .catch(function(error) {
+    }).catch(function(error) {
         expect(error.precedingErrors[0].message.indexOf('Must declare the scalar variable') !== -1).to.equal(true);
         done();
       })
       .catch(done);
   });
-  it('should reject due no parameters in statement in layer 1', function(done) {
+  it('should not reject due extra parameters in statement in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
-      'VALUES (product_no, name, price)', {
+      'VALUES (8, \'Avocado\', 0.99)', {
       name: 'Duck',
       product_n: 5,
       price: 0.99
     }).then(function() {
-      done(new Error('No error?'));
-    })
-      .catch(function(error) {
-        expect(error.precedingErrors[0].message.indexOf('Invalid column name') !== -1).to.equal(true);
-        done();
-      })
-      .catch(done);
+      done();
+    }).catch(done);
   });
   it('should create a table in layer 2', function(done) {
     layer2.execute('CREATE TABLE products ( ' +

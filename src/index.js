@@ -132,12 +132,11 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
   var convertParams = function() {
     if (Array.isArray(params)) {
       var match = statement.match(/(\$\w*\b)/g);
-      assert(Array.isArray(match), 'No parameter is defined in statement');
-      assert(match.length === params.length, 'Parameters in statement ' +
-        'not match parameters in object params');
+      assert(((match && match.length) || 0) <= Object.keys(params).length, 'There are more ' +
+        'parameters in statement than in object params');
       debug(match);
       var paramsObj = {};
-      match.map(function(param) {
+      if (match) match.map(function(param) {
         var key = param.substr(1);
         paramsObj['p' + key] = params[Number(key) - 1];
         statement = statement.replace(param, '@p' + key);
