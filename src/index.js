@@ -157,6 +157,12 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
         debug('input', key, param);
         if (typeof param === 'object' && !(param instanceof Date)) {
           input[key] = param && param.value || null;
+          // Fix crash when inform a Date value and pass a string
+          if (input[key] !== null &&
+            (param.type === 'date' || param.type === 'datetime') &&
+            !(input[key] instanceof Date)) {
+            input[key] = new Date(input[key]);
+          }
           ps.input(key, getType(input[key], param));
         } else {
           input[key] = param || null;

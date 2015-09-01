@@ -342,9 +342,9 @@ describe('mssql cr layer', function() {
     }).then(function() {
       done(new Error('No error?'));
     }).catch(function(error) {
-        expect(error.precedingErrors[0].message.indexOf('Must declare the scalar variable') !== -1).to.equal(true);
-        done();
-      })
+      expect(error.precedingErrors[0].message.indexOf('Must declare the scalar variable') !== -1).to.equal(true);
+      done();
+    })
       .catch(done);
   });
   it('should not reject due extra parameters in statement in layer 1', function(done) {
@@ -383,8 +383,12 @@ describe('mssql cr layer', function() {
         return layer2.execute('INSERT INTO products ' +
           'VALUES ($1, $2, $3, $4, $5, $6)', [2, 'Pasta', 49.99,
           '2014-12-31',
-          '2014-12-31T00:00:00Z',
-          new Date('2014-12-31T00:00:00')]);
+          {value: '2014-12-31T00:00:00Z', type: 'datetime'},
+          {
+            value: '2014-12-31T00:00:00',
+            type: 'datetime',
+            timezone: 'ignore'
+          }]);
       })
       .then(function() {
         return layer2.execute('INSERT INTO products ' +
