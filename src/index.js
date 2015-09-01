@@ -233,11 +233,24 @@ function getType(value, param) {
     if (value instanceof Date) {
       type = mssql.DateTime2;
     } else if (typeof value === 'number') {
-      type = mssql.Decimal;
+      type = new mssql.Decimal(('' + value).length, decimalPlaces(value));
     }
   }
   debug('to type', type);
   return type;
+}
+
+function decimalPlaces(num) {
+  var match = ('' + num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+  if (!match) {
+    return 0;
+  }
+  return Math.max(
+    0,
+    // Number of digits right of decimal point.
+    (match[1] ? match[1].length : 0)
+      // Adjust for scientific notation.
+    - (match[2] ? +match[2] : 0));
 }
 
 

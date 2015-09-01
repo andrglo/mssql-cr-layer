@@ -361,7 +361,7 @@ describe('mssql cr layer', function() {
     layer2.execute('CREATE TABLE products ( ' +
       'product_no integer, ' +
       'name varchar(10), ' +
-      'price numeric,' +
+      'price numeric(12, 2),' +
       'lastSale date,' +
       'createdAt datetimeoffset,' +
       'updatedAt datetime2)')
@@ -412,7 +412,7 @@ describe('mssql cr layer', function() {
           'VALUES ($1, $2, $3, $4, $5, $6)', [2, 'Pasta', 49.99,
           '2015-01-04',
           '2015-01-01T00:00:00-02:00',
-          new Date('2014-12-31T22:00:00')])
+          new Date('2014-12-31T22:00:00')]);
       })
       .then(function(res) {
         expect(res).to.be.a('array');
@@ -453,6 +453,17 @@ describe('mssql cr layer', function() {
         expect(record.lastSale.toISOString().substr(0, 10)).to.equal(now.toISOString().substr(0, 10));
         expect(record.createdAt.toISOString()).to.equal(now.toISOString());
         expect(record.updatedAt.toISOString()).to.equal(now.toISOString());
+        done();
+      })
+      .catch(done);
+  });
+  it('lets check the numeric value', function(done) {
+    layer2.query('SELECT * FROM products ORDER BY lastSale')
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(6);
+        var record = recordset[5];
+        expect(Number(record.price)).to.equal(59.99);
         done();
       })
       .catch(done);
