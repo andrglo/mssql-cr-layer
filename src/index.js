@@ -1,6 +1,5 @@
 var mssql = require('mssql');
 var assert = require('assert');
-var debug = require('debug')('mssql-cr-layer');
 
 module.exports = MssqlCrLayer;
 
@@ -31,9 +30,9 @@ function MssqlCrLayer(config) {
     port: config.port,
     server: config.host,
     pool: {
-      max: (config.pool && config.pool.max),
+      max: config.pool && config.pool.max,
       min: 0,
-      idleTimeoutMillis: (config.pool && config.pool.idleTimeout)
+      idleTimeoutMillis: config.pool && config.pool.idleTimeout
     }
   });
 }
@@ -88,7 +87,7 @@ MssqlCrLayer.prototype.transaction = function(fn) {
  * @returns {Promise}
  */
 MssqlCrLayer.prototype.batch = function(script, options) {
-  return (new mssql.Request((options && options.transaction) || this.connection))
+  return (new mssql.Request(options && options.transaction || this.connection))
     .batch(script)
     .then(function(recordset) {
       return recordset || [];
@@ -119,9 +118,7 @@ MssqlCrLayer.prototype.execute = function(statement, params, options) {
  */
 MssqlCrLayer.prototype.query = function(statement, params, options) {
 
-  debug('QUERY:', statement, params);
-
-  var connection = (options && options.transaction) || this.connection;
+  var connection = options && options.transaction || this.connection;
   if (params === void 0 || params === null) {
     return (new mssql.Request(connection)).query(statement)
       .then(function(recordset) {
@@ -132,17 +129,17 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
   var convertParams = function() {
     if (Array.isArray(params)) {
       var match = statement.match(/(\$\w*\b)/g);
-      assert(((match && match.length) || 0) <= Object.keys(params).length, 'There are more ' +
+      assert((match && match.length || 0) <= Object.keys(params).length, 'There are more ' +
         'parameters in statement than in object params');
-      debug(match);
       var paramsObj = {};
-      if (match) match.map(function(param) {
-        var key = param.substr(1);
-        paramsObj['p' + key] = params[Number(key) - 1];
-        statement = statement.replace(param, '@p' + key);
-      });
+      if (match) {
+        match.map(function(param) {
+          var key = param.substr(1);
+          paramsObj['p' + key] = params[Number(key) - 1];
+          statement = statement.replace(param, '@p' + key);
+        });
+      }
       params = paramsObj;
-      debug('params converted', statement, params);
     }
   };
 
@@ -154,7 +151,6 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       ps = new mssql.PreparedStatement(connection);
       Object.keys(params).forEach(function(key) {
         var param = params[key];
-        debug('input', key, param);
         if (typeof param === 'object' && !(param instanceof Date)) {
           input[key] = param && param.value || null;
           // Fix crash when inform a Date value and pass a string
@@ -172,22 +168,18 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           ps.input(key, getType(input[key]));
         }
       });
-      debug('params typed');
     })
     .then(function() {
       return ps.prepare(statement);
     })
     .then(function() {
-      debug('prepared');
       return ps.execute(input)
         .then(function(recordset) {
-          debug('executed');
           return ps.unprepare().then(function() {
             return recordset || [];
           });
         })
         .catch(function(error) {
-          debug('catch', statement, error);
           return ps.unprepare().then(function() {
             throw error;
           });
@@ -214,7 +206,6 @@ MssqlCrLayer.prototype.wrap = function(identifier) {
 
 function getType(value, param) {
   var type = mssql.NVarChar;
-  debug('from type', value, param);
   if (param && param.type) {
     switch (param.type) {
       case 'integer':
@@ -245,21 +236,17 @@ function getType(value, param) {
       type = new mssql.Decimal(('' + value).length, decimalPlaces(value));
     }
   }
-  debug('to type', type);
   return type;
 }
 
 function decimalPlaces(num) {
   var match = ('' + num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
-  if (!match) {
-    return 0;
-  }
-  return Math.max(
+  return match ? Math.max(
     0,
     // Number of digits right of decimal point.
     (match[1] ? match[1].length : 0)
       // Adjust for scientific notation.
-    - (match[2] ? +match[2] : 0));
+    - (match[2] ? +match[2] : 0)) : 0;
 }
 
 
