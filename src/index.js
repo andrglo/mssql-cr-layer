@@ -35,6 +35,7 @@ function MssqlCrLayer(config) {
       idleTimeoutMillis: config.pool && config.pool.idleTimeout
     }
   });
+  this.ISOLATION_LEVEL = config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
 
 MssqlCrLayer.prototype.dialect = 'mssql';
@@ -51,15 +52,17 @@ MssqlCrLayer.prototype.connect = function() {
  * fn should return a promise with commands that when resolved will be committed
  * or rolled back in case of an error. At each command you should pass
  * the transaction parameter as a transaction property in options
+ * @param options
  * @returns {Promise} With the return of the last promise executed
  */
-MssqlCrLayer.prototype.transaction = function(fn) {
+MssqlCrLayer.prototype.transaction = function(fn, options) {
+  options = options || {};
   var transaction = new mssql.Transaction(this.connection);
   var rolledBack = false;
   transaction.on('rollback', function() {
     rolledBack = true;
   });
-  return transaction.begin()
+  return transaction.begin(mssql.ISOLATION_LEVEL[options.ISOLATION_LEVEL || this.ISOLATION_LEVEL])
     .then(function() {
       return fn(transaction);
     })

@@ -35,7 +35,9 @@ function createMssqlDb(dbName) {
     .then(function() {
       return createDbLayer[dbName].execute('IF EXISTS(select * from sys.databases where name=\'' +
         dbName + '\') DROP DATABASE [' + dbName + '];' +
-        'CREATE DATABASE [' + dbName + '];');
+        'CREATE DATABASE [' + dbName + '];' +
+        'ALTER DATABASE [' + dbName + '] SET ALLOW_SNAPSHOT_ISOLATION ON;' +
+        'ALTER DATABASE [' + dbName + '] SET READ_COMMITTED_SNAPSHOT ON');
     });
 }
 
@@ -672,7 +674,7 @@ describe('mssql cr layer', function() {
               return layer
                 .execute('INSERT INTO products VALUES ($1, $2, $3)', [3, 'Duck', 0.99], {transaction: t})
             });
-        });
+        }, {ISOLATION_LEVEL: 'SNAPSHOT'});
       })
       .then(function() {
         return layer.query('SELECT * FROM products WHERE product_no=@product_no',
