@@ -72,12 +72,12 @@ describe('mssql cr layer', function() {
 
   it('should create a table in layer 0', function(done) {
     layer0.execute('CREATE TABLE films (' +
-      'code char(5) CONSTRAINT firstkey PRIMARY KEY, ' +
-      'title       varchar(40) NOT NULL, ' +
-      'did integer NOT NULL, ' +
-      'date_prod   date, ' +
-      'kind varchar(10), ' +
-      'len datetime )')
+        'code char(5) CONSTRAINT firstkey PRIMARY KEY, ' +
+        'title       varchar(40) NOT NULL, ' +
+        'did integer NOT NULL, ' +
+        'date_prod   date, ' +
+        'kind varchar(10), ' +
+        'len datetime )')
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
@@ -118,9 +118,9 @@ describe('mssql cr layer', function() {
   });
   it('should create a table in layer 1', function(done) {
     layer1.execute('CREATE TABLE products ( ' +
-      'product_no integer, ' +
-      'name varchar(10), ' +
-      'price numeric(12,2) )')
+        'product_no integer, ' +
+        'name varchar(10), ' +
+        'price numeric(12,2) )')
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
@@ -132,7 +132,7 @@ describe('mssql cr layer', function() {
     layer1
       .transaction(function(t) {
         return layer1.execute('INSERT INTO products ' +
-          'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
+            'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
           .then(function() {
             return layer1.execute('INSERT INTO products ' +
               'VALUES (2, \'Chicken\', 19.99)', null, {transaction: t})
@@ -190,7 +190,7 @@ describe('mssql cr layer', function() {
     layer1
       .transaction(function(t) {
         return layer1.execute('INSERT INTO products ' +
-          'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
+            'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
           .then(function() {
             return layer1.execute('INSERT INTO products ' +
               'VALUES (2, \'Chicken\', 19.99)', null, {transaction: t})
@@ -214,7 +214,7 @@ describe('mssql cr layer', function() {
   });
   it('should create more one record when no transaction and a fail occurs in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
-      'VALUES (3, \'Wine\', 99.99)')
+        'VALUES (3, \'Wine\', 99.99)')
       .then(function() {
         throw new Error('Crash')
       })
@@ -240,7 +240,7 @@ describe('mssql cr layer', function() {
     layer1
       .transaction(function(t) {
         return layer1.execute('INSERT INTO products ' +
-          'VALUES (4, \'Corn\', 39.99)', null, {transaction: t})
+            'VALUES (4, \'Corn\', 39.99)', null, {transaction: t})
           .then(function() {
             return layer1.execute('INSERT INTO products ' +
               'VALUES (5, \'Very long product name\', 19.99)', null, {transaction: t})
@@ -272,7 +272,7 @@ describe('mssql cr layer', function() {
   });
   it('should create more one record using array parameters in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
-      'VALUES ($1, $2, $3)', [4, 'Corn', 59.99])
+        'VALUES ($1, $2, $3)', [4, 'Corn', 59.99])
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
@@ -315,7 +315,7 @@ describe('mssql cr layer', function() {
   });
   it('should reject due less parameters needed in layer 1', function(done) {
     layer1.execute('INSERT INTO products ' +
-      'VALUES ($1, $2, $3)', ['Duck', 5])
+        'VALUES ($1, $2, $3)', ['Duck', 5])
       .then(function() {
         done(new Error('No error?'));
       })
@@ -334,9 +334,9 @@ describe('mssql cr layer', function() {
     }).then(function() {
       done(new Error('No error?'));
     }).catch(function(error) {
-      expect(error.precedingErrors[0].message.indexOf('Must declare the scalar variable') !== -1).to.equal(true);
-      done();
-    })
+        expect(error.precedingErrors[0].message.indexOf('Must declare the scalar variable') !== -1).to.equal(true);
+        done();
+      })
       .catch(done);
   });
   it('should not reject due extra parameters in statement in layer 1', function(done) {
@@ -351,12 +351,12 @@ describe('mssql cr layer', function() {
   });
   it('should create a table in layer 2', function(done) {
     layer2.execute('CREATE TABLE products ( ' +
-      'product_no integer, ' +
-      'name varchar(10), ' +
-      'price numeric(12, 2),' +
-      'lastSale date,' +
-      'createdAt datetimeoffset,' +
-      'updatedAt datetime2)')
+        'product_no integer, ' +
+        'name varchar(10), ' +
+        'price numeric(12, 2),' +
+        'lastSale date,' +
+        'createdAt datetimeoffset,' +
+        'updatedAt datetime2)')
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
@@ -367,10 +367,10 @@ describe('mssql cr layer', function() {
   var now = new Date();
   it('should insert date and time', function(done) {
     layer2.execute('INSERT INTO products ' +
-      'VALUES ($1, $2, $3, $4, $5, $6)', [1, 'Cheese', 59.99,
-      now.toISOString().substr(0, 10),
-      now,
-      now])
+        'VALUES ($1, $2, $3, $4, $5, $6)', [1, 'Cheese', 59.99,
+        now.toISOString().substr(0, 10),
+        now,
+        now])
       .then(function() {
         return layer2.execute('INSERT INTO products ' +
           'VALUES ($1, $2, $3, $4, $5, $6)', [2, 'Pasta', 49.99,
@@ -574,14 +574,14 @@ describe('mssql cr layer', function() {
   });
   it('should insert null if parameter is null or undefined also in object format in layer 1', function(done) {
     layer1.execute('UPDATE products ' +
-      'SET price=$1,name=$2 WHERE product_no=$3', [{value: null}, {}, 5])
+        'SET price=$1,name=$2 WHERE product_no=$3', [{value: null}, {}, 5])
       .then(function(res) {
         expect(res).to.be.a('array');
         expect(res.length).to.equal(0);
         done();
       }).catch(function(error) {
-        done(error);
-      });
+      done(error);
+    });
   });
   it('lets check product 5 the if the columns are null', function(done) {
     layer1.query('SELECT * FROM products WHERE product_no=$1', [5])
@@ -657,6 +657,31 @@ describe('mssql cr layer', function() {
       .then(function(recordset) {
         expect(recordset).to.be.a('array');
         expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
+  it('create a layer with no connection info', function(done) {
+    var layer = new MssqlCrLayer();
+    layer
+      .query('SELECT * FROM products WHERE product_no=$1', [5], {
+        user: process.env.MSSQL_USER,
+        password: process.env.MSSQL_PASSWORD,
+        host: process.env.MSSQL_HOST,
+        port: process.env.MSSQL_PORT,
+        database: databaseName[1]
+      })
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(1);
+        var record = recordset[0];
+        expect(record.name).to.equal('');
+        expect(record.price).to.equal(0);
+      })
+      .then(function() {
+        return layer.close();
+      })
+      .then(function() {
         done();
       })
       .catch(done);

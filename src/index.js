@@ -23,14 +23,10 @@ function MssqlCrLayer(config) {
   if (!(this instanceof MssqlCrLayer)) {
     return new MssqlCrLayer(config);
   }
-  assert(config, 'Default configuration should be informed');
-  assert(config.database, 'Default configuration should have a database');
-  assert(config.user, 'Default configuration should have a user');
-  assert(config.host, 'Default configuration should have a host');
   this.config = toMssqlConfig(config);
   this.connections = [];
 
-  this.ISOLATION_LEVEL = config.ISOLATION_LEVEL || 'READ_COMMITTED';
+  this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
 
 MssqlCrLayer.prototype.dialect = 'mssql';
@@ -277,11 +273,11 @@ function decimalPlaces(num) {
 function toMssqlConfig(config, defaultConfig) {
   config = config || {};
   return {
-    user: config.user || defaultConfig.user,
-    database: config.database || defaultConfig.database,
+    user: config.user || defaultConfig && defaultConfig.user,
+    database: config.database || defaultConfig && defaultConfig.database,
     password: config.password || defaultConfig && defaultConfig.password,
     port: config.port || defaultConfig && defaultConfig.port || 1433,
-    server: config.host || defaultConfig.server || 'localhost',
+    server: config.host || defaultConfig && defaultConfig.server || 'localhost',
     pool: {
       max: config.pool && config.pool.max ||
       defaultConfig && defaultConfig.pool && defaultConfig.pool.max,
