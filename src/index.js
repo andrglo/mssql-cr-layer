@@ -24,7 +24,7 @@ function MssqlCrLayer(config) {
     return new MssqlCrLayer(config);
   }
   this.config = toMssqlConfig(config);
-  this.connections = [];
+  this.connections = new Map();
 
   this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
@@ -35,17 +35,17 @@ MssqlCrLayer.prototype.delimiters = '[]';
 
 MssqlCrLayer.prototype.connect = function(config) {
   config = toMssqlConfig(config, this.config);
-  for (var connection of this.connections) {
-    if (sameDb(config, connection.config)) {
-      return Promise.resolve(connection.connection);
-    }
+  var getConnectionKey = () => `${config.server}${config.port}${config.database}${config.user}`;
+  var connection = this.connections.get(getConnectionKey());
+  if (connection) {
+    return Promise.resolve(connection.connection);
   }
   connection = {};
   connection.config = Object.assign({}, config);
   connection.connection = new mssql.Connection(config);
   return connection.connection.connect()
     .then(() => {
-      this.connections.push(connection);
+      this.connections.set(getConnectionKey(), connection);
       return connection.connection;
     });
 };
@@ -209,11 +209,12 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
  * @returns {Promise}
  */
 MssqlCrLayer.prototype.close = function() {
-  var connections = this.connections;
-  this.connections = [];
-  return connections.reduce(
-    (promise, connection) => promise.then(() => connection.connection.close()),
-    Promise.resolve());
+  var promise = Promise.resolve();
+  this.connections.forEach(connection => {
+    promise = promise.then(() => connection.connection.close());
+  });
+  this.connections = new Map();
+  return promise;
 };
 
 /**
