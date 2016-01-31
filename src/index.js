@@ -1,6 +1,8 @@
 var mssql = require('mssql');
 var assert = require('assert');
 
+var connections = new Map(); // Connection pool
+
 module.exports = MssqlCrLayer;
 
 /**
@@ -24,7 +26,6 @@ function MssqlCrLayer(config) {
     return new MssqlCrLayer(config);
   }
   this.config = toMssqlConfig(config);
-  this.connections = new Map();
 
   this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
@@ -36,7 +37,7 @@ MssqlCrLayer.prototype.delimiters = '[]';
 MssqlCrLayer.prototype.connect = function(config) {
   config = toMssqlConfig(config, this.config);
   var getConnectionKey = () => `${config.server}${config.port}${config.database}${config.user}`;
-  var connection = this.connections.get(getConnectionKey());
+  var connection = connections.get(getConnectionKey());
   if (connection) {
     return Promise.resolve(connection.connection);
   }
@@ -45,7 +46,7 @@ MssqlCrLayer.prototype.connect = function(config) {
   connection.connection = new mssql.Connection(config);
   return connection.connection.connect()
     .then(() => {
-      this.connections.set(getConnectionKey(), connection);
+      connections.set(getConnectionKey(), connection);
       return connection.connection;
     });
 };
@@ -210,10 +211,10 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
  */
 MssqlCrLayer.prototype.close = function() {
   var promise = Promise.resolve();
-  this.connections.forEach(connection => {
+  connections.forEach(connection => {
     promise = promise.then(() => connection.connection.close());
   });
-  this.connections = new Map();
+  connections = new Map();
   return promise;
 };
 
