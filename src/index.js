@@ -2,6 +2,7 @@ var mssql = require('mssql');
 var assert = require('assert');
 
 var connections = new Map(); // Connection pool
+var connectionParams = new WeakMap(); // Hidden connection parameters
 
 module.exports = MssqlCrLayer;
 
@@ -25,7 +26,7 @@ function MssqlCrLayer(config) {
   if (!(this instanceof MssqlCrLayer)) {
     return new MssqlCrLayer(config);
   }
-  this.config = toMssqlConfig(config);
+  connectionParams.set(this, toMssqlConfig(config));
 
   this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
@@ -35,7 +36,7 @@ MssqlCrLayer.prototype.dialect = 'mssql';
 MssqlCrLayer.prototype.delimiters = '[]';
 
 MssqlCrLayer.prototype.connect = function(config) {
-  config = toMssqlConfig(config, this.config);
+  config = toMssqlConfig(config, connectionParams.get(this));
   var getConnectionKey = () => `${config.server}${config.port}${config.database}${config.user}`;
   var connection = connections.get(getConnectionKey());
   if (connection) {
