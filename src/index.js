@@ -1,5 +1,6 @@
 var mssql = require('mssql');
 var assert = require('assert');
+var every = require('lodash.every');
 
 var connections = new Map(); // Connection pool
 var connectionParams = new WeakMap(); // Hidden connection parameters
@@ -93,6 +94,20 @@ MssqlCrLayer.prototype.transaction = function(fn, options) {
     });
 };
 
+const fold = record => { // tweak for node-mssql returning a array if you do a SELECT with a duplicate column name
+  Object.keys(record)
+    .forEach(key => {
+      const value = record[key];
+      if (Array.isArray(value) && value.length > 1) {
+        const first = record[key][0];
+        if (every(value, el => el === first)) {
+          record[key] = first;
+        }
+      }
+    });
+  return record;
+};
+
 /**
  * Execute a script
  * @param script {string}
@@ -106,7 +121,7 @@ MssqlCrLayer.prototype.batch = function(script, options) {
       return (new mssql.Request(connection))
         .batch(script)
         .then(function(recordset) {
-          return recordset || [];
+          return recordset ? recordset.map(fold) : [];
         });
     });
 };
@@ -141,7 +156,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       .then(function(connection) {
         return (new mssql.Request(connection)).query(statement)
           .then(function(recordset) {
-            return recordset || [];
+            return recordset ? recordset.map(fold) : [];
           });
       });
   }
@@ -195,7 +210,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       return ps.execute(input)
         .then(function(recordset) {
           return ps.unprepare().then(function() {
-            return recordset || [];
+            return recordset ? recordset.map(fold) : [];
           });
         })
         .catch(function(error) {
@@ -269,7 +284,7 @@ function decimalPlaces(num) {
     0,
     // Number of digits right of decimal point.
     (match[1] ? match[1].length : 0)
-      // Adjust for scientific notation.
+    // Adjust for scientific notation.
     - (match[2] ? +match[2] : 0)) : 0;
 }
 
