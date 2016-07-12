@@ -2,7 +2,6 @@ var mssql = require('mssql');
 var assert = require('assert');
 var every = require('lodash.every');
 
-var connections = new Map(); // Connection pool
 var connectionParams = new WeakMap(); // Hidden connection parameters
 
 module.exports = MssqlCrLayer;
@@ -38,10 +37,14 @@ MssqlCrLayer.prototype.delimiters = '[]';
 
 MssqlCrLayer.prototype.connect = function(config) {
   config = toMssqlConfig(config, connectionParams.get(this));
+  var connections = this.connections = this.connections || new Map();
   var getConnectionKey = () => `${config.server}${config.port}${config.database}${config.user}`;
   var connection = connections.get(getConnectionKey());
   if (connection) {
-    return Promise.resolve(connection.connection);
+    if (config.password === connection.config.password) {
+      return Promise.resolve(connection.connection);
+    }
+    connection.connection.close();
   }
   connection = {};
   connection.config = Object.assign({}, config);
@@ -227,10 +230,10 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
  */
 MssqlCrLayer.prototype.close = function() {
   var promise = Promise.resolve();
-  connections.forEach(connection => {
+  this.connections.forEach(connection => {
     promise = promise.then(() => connection.connection.close());
   });
-  connections = new Map();
+  this.connections = null;
   return promise;
 };
 
