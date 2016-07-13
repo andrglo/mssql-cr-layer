@@ -97,6 +97,42 @@ MssqlCrLayer.prototype.transaction = function(fn, options) {
     });
 };
 
+const rolledBack = new WeakMap();
+
+MssqlCrLayer.prototype.beginTransaction = function(options) {
+  options = options || {};
+  var isolationLevel = options.ISOLATION_LEVEL || this.ISOLATION_LEVEL;
+  return this.connect(options)
+    .then(function(connection) {
+      var transaction = new mssql.Transaction(connection);
+      rolledBack.set(transaction, false);
+      transaction.on('rollback', function() {
+        rolledBack.set(transaction, true);
+      });
+      return transaction.begin(mssql.ISOLATION_LEVEL[isolationLevel])
+        .then(function() {
+          return transaction;
+        });
+    });
+};
+
+MssqlCrLayer.prototype.commit = function(transaction) {
+  return transaction.commit()
+    .catch(function(err) {
+      if (!rolledBack.get(transaction)) {
+        return transaction.rollback()
+          .then(function() {
+            throw err;
+          });
+      }
+      throw err;
+    });
+};
+
+MssqlCrLayer.prototype.rollback = function(transaction) {
+  return rolledBack.get(transaction) ? Promise.resolve() : transaction.rollback();
+};
+
 const fold = record => { // tweak for node-mssql returning a array if you do a SELECT with a duplicate column name
   Object.keys(record)
     .forEach(key => {
@@ -168,7 +204,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
     if (Array.isArray(params)) {
       var match = statement.match(/(\$\w*\b)/g);
       assert((match && match.length || 0) <= Object.keys(params).length, 'There are more ' +
-        'parameters in statement than in object params');
+                                                                         'parameters in statement than in object params');
       var paramsObj = {};
       if (match) {
         match.map(function(param) {
@@ -193,7 +229,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           input[key] = param && param.value !== void 0 ? param.value : null;
           // Fix crash when inform a Date value and pass a string
           if (input[key] !== null &&
-            (param.type === 'date' || param.type === 'datetime') && !(input[key] instanceof Date)) {
+              (param.type === 'date' || param.type === 'datetime') && !(input[key] instanceof Date)) {
             input[key] = new Date(input[key]);
           }
           ps.input(key, getType(input[key], param));
@@ -301,18 +337,18 @@ function toMssqlConfig(config, defaultConfig) {
     server: config.host || defaultConfig && defaultConfig.server || 'localhost',
     pool: {
       max: config.pool && config.pool.max ||
-      defaultConfig && defaultConfig.pool && defaultConfig.pool.max,
+           defaultConfig && defaultConfig.pool && defaultConfig.pool.max,
       min: 0,
       idleTimeoutMillis: config.pool && config.pool.idleTimeout ||
-      defaultConfig && defaultConfig.pool && defaultConfig.pool.idleTimeoutMillis
+                         defaultConfig && defaultConfig.pool && defaultConfig.pool.idleTimeoutMillis
     }
   };
 }
 
 function sameDb(c1, c2) {
   return c1.user === c2.user &&
-    c1.database === c2.database &&
-    c1.server === c2.server &&
-    c1.port === c2.port;
+         c1.database === c2.database &&
+         c1.server === c2.server &&
+         c1.port === c2.port;
 }
 

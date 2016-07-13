@@ -135,7 +135,7 @@ describe('mssql cr layer', function() {
             'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
           .then(function() {
             return layer1.execute('INSERT INTO products ' +
-              'VALUES (2, \'Chicken\', 19.99)', null, {transaction: t})
+              'VALUES (2, \'Chicken\', 19.99)', null, {transaction: t});
           })
           .then(function() {
             throw new Error('Crash')
@@ -147,6 +147,34 @@ describe('mssql cr layer', function() {
       .catch(function(error) {
         expect(error.message.indexOf('Crash') !== -1).to.equal(true);
         done();
+      })
+      .catch(done);
+  });
+  it('products should be empty in layer 1', function(done) {
+    layer1.query('SELECT * FROM products')
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
+  it('should not create any record if we rollback a transaction in layer 1, using step by step control', function(done) {
+    layer1
+      .beginTransaction()
+      .then(function(t) {
+        return layer1.execute('INSERT INTO products ' +
+                              'VALUES (1, \'Cheese\', 9.99)', null, {transaction: t})
+          .then(function() {
+            return layer1.execute('INSERT INTO products ' +
+                                  'VALUES (2, \'Chicken\', 19.99)', null, {transaction: t});
+          })
+          .then(function() {
+            return layer1.rollback(t);
+          })
+          .then(function() {
+            done();
+          });
       })
       .catch(done);
   });
@@ -668,6 +696,34 @@ describe('mssql cr layer', function() {
       .then(function(recordset) {
         expect(recordset).to.be.a('array');
         expect(recordset.length).to.equal(0);
+        done();
+      })
+      .catch(done);
+  });
+  it('should create the two records using commit in transaction step by step in layer 1', function(done) {
+    layer1
+      .beginTransaction()
+      .then(function(t) {
+        return layer1.execute('INSERT INTO products ' +
+                              'VALUES (100, \'Cheese\', 9.99)', null, {transaction: t})
+          .then(function() {
+            return layer1.execute('INSERT INTO products ' +
+                                  'VALUES (200, \'Chicken\', 19.99)', null, {transaction: t})
+          })
+          .then(function() {
+            return layer1.commit(t);
+          });
+      })
+      .then(function() {
+        done();
+      })
+      .catch(done);
+  });
+  it('products should have two records in layer 1', function(done) {
+    layer1.query('SELECT * FROM products WHERE product_no >= 100')
+      .then(function(recordset) {
+        expect(recordset).to.be.a('array');
+        expect(recordset.length).to.equal(2);
         done();
       })
       .catch(done);
