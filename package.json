@@ -1,6 +1,6 @@
 {
   "name": "mssql-cr-layer",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "A MS SQL Server interface layer for common requests",
   "homepage": "",
   "repository": "andrglo/mssql-cr-layer",
@@ -27,9 +27,9 @@
     "gulp": "^3.9.1",
     "gulp-coveralls": "^0.1.4",
     "gulp-eslint": "^3.0.1",
-    "gulp-istanbul": "^1.0.0",
-    "gulp-mocha": "^2.2.0",
-    "gulp-nsp": "^2.4.1"
+    "gulp-istanbul": "^1.1.1",
+    "gulp-mocha": "^3.0.1",
+    "gulp-nsp": "^2.4.2"
   },
   "scripts": {
     "prepublish": "gulp prepublish",
@@ -37,7 +37,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "lodash.every": "^4.4.0",
+    "lodash.every": "^4.6.0",
     "mssql": "^3.3.0"
   }
 }

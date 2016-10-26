@@ -335,6 +335,7 @@ function toMssqlConfig(config, defaultConfig) {
     password: config.password || defaultConfig && defaultConfig.password,
     port: config.port || defaultConfig && defaultConfig.port || 1433,
     server: config.host || defaultConfig && defaultConfig.server || 'localhost',
+    requestTimeout: config.requestTimeout || defaultConfig && defaultConfig.requestTimeout || 6000,
     pool: {
       max: config.pool && config.pool.max ||
            defaultConfig && defaultConfig.pool && defaultConfig.pool.max,
