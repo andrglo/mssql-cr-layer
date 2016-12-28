@@ -26,8 +26,12 @@ function MssqlCrLayer(config) {
   if (!(this instanceof MssqlCrLayer)) {
     return new MssqlCrLayer(config);
   }
-  connectionParams.set(this, toMssqlConfig(config));
-
+  const mssqlConfig = toMssqlConfig(config);
+  connectionParams.set(this, mssqlConfig);
+  this.user = mssqlConfig.user;
+  this.database = mssqlConfig.database;
+  this.host = mssqlConfig.server;
+  this.port = mssqlConfig.port;
   this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED';
 }
 
