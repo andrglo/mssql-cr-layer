@@ -1,56 +1,56 @@
-'use strict';
-var path = require('path');
-var gulp = require('gulp');
-var eslint = require('gulp-eslint');
-var mocha = require('gulp-mocha');
-var istanbul = require('gulp-istanbul');
-var nsp = require('gulp-nsp');
-var coveralls = require('gulp-coveralls');
+'use strict'
+var path = require('path')
+var gulp = require('gulp')
+var eslint = require('gulp-eslint')
+var mocha = require('gulp-mocha')
+var istanbul = require('gulp-istanbul')
+var nsp = require('gulp-nsp')
+var coveralls = require('gulp-coveralls')
 
 gulp.task('static', function() {
   return gulp.src('src/**/*.js')
     .pipe(eslint())
     .pipe(eslint.format())
-    .pipe(eslint.failAfterError());
-});
+    .pipe(eslint.failAfterError())
+})
 
 gulp.task('nsp', function(cb) {
-  nsp({package: path.join(__dirname, 'package.json')}, cb);
-});
+  nsp({package: path.join(__dirname, 'package.json')}, cb)
+})
 
 gulp.task('pre-test', function() {
   return gulp.src('src/**/*.js')
     .pipe(istanbul({includeUntested: true}))
-    .pipe(istanbul.hookRequire());
-});
+    .pipe(istanbul.hookRequire())
+})
 
 gulp.task('test', ['pre-test'], function(cb) {
   if (process.env.CI) { // no support for mssql
-    return;
+    return
   }
-  var error;
+  var error
   gulp.src('test/index.js')
-    .pipe(mocha({reporter: 'spec', timeout: 15000}))
+    .pipe(mocha({reporter: 'spec', timeout: 15000, bail: true}))
     .on('error', function(e) {
-      error = e;
-      cb(error);
+      error = e
+      cb(error)
     })
     .pipe(istanbul.writeReports({
       reporters: ['json', 'text', 'text-summary', 'lcov']
     }))
     .on('end', function() {
-      if (!error) cb();
-    });
-});
+      if (!error) cb()
+    })
+})
 
 gulp.task('coveralls', ['test'], function() {
   if (!process.env.CI) {
-    return;
+    return
   }
 
   return gulp.src(path.join(__dirname, 'coverage/lcov.info'))
-    .pipe(coveralls());
-});
+    .pipe(coveralls())
+})
 
-gulp.task('prepublish', ['nsp']);
-gulp.task('default', ['static', 'test', 'coveralls']);
+gulp.task('prepublish', ['nsp'])
+gulp.task('default', ['static', 'test', 'coveralls'])
