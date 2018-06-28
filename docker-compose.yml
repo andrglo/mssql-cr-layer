@@ -1,0 +1,28 @@
+version: '2'
+
+services:
+
+  dms:
+    image: andrglo/everest:10.2.1
+    hostname: json-schema-entity
+    command: tail -f /dev/null
+    working_dir: /andrglo/json-schema-entity
+    volumes:
+      - ./docker_fish_history:/root/.config/fish/fish_history
+      - .:/andrglo/json-schema-entity
+    environment:
+      - NODE_ENV=development
+      - MSSQL_PASSWORD=Juriti01
+      - MSSQL_HOST=mssql
+    restart: always
+
+  mssql:
+    image: microsoft/mssql-server-linux:2017-GDR
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Juriti01
+      - MSSQL_PID=Express
+      - MSSQL_COLLATION=Latin1_General_CI_AI
+    restart: always
+
+

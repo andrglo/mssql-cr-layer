@@ -32,7 +32,7 @@ function MssqlCrLayer(config) {
   this.database = mssqlConfig.database
   this.host = mssqlConfig.server
   this.port = mssqlConfig.port
-  this.ISOLATION_LEVEL = config && config.ISOLATION_LEVEL || 'READ_COMMITTED'
+  this.ISOLATION_LEVEL = (config && config.ISOLATION_LEVEL) || 'READ_COMMITTED'
 }
 
 MssqlCrLayer.prototype.dialect = 'mssql'
@@ -41,8 +41,9 @@ MssqlCrLayer.prototype.delimiters = '[]'
 
 MssqlCrLayer.prototype.connect = function() {
   const config = connectionParams.get(this)
-  var connections = this.connections = this.connections || new Map()
-  var getConnectionKey = () => `${config.server}${config.port}${config.database}${config.user}`
+  var connections = (this.connections = this.connections || new Map())
+  var getConnectionKey = () =>
+    `${config.server}${config.port}${config.database}${config.user}`
   var connection = connections.get(getConnectionKey())
   if (connection) {
     if (config.password === connection.config.password) {
@@ -53,11 +54,10 @@ MssqlCrLayer.prototype.connect = function() {
   connection = {}
   connection.config = Object.assign({}, config)
   connection.connection = new mssql.ConnectionPool(config)
-  return connection.connection.connect()
-    .then(() => {
-      connections.set(getConnectionKey(), connection)
-      return connection.connection
-    })
+  return connection.connection.connect().then(() => {
+    connections.set(getConnectionKey(), connection)
+    return connection.connection
+  })
 }
 
 /**
@@ -72,33 +72,31 @@ MssqlCrLayer.prototype.connect = function() {
 MssqlCrLayer.prototype.transaction = function(fn, options) {
   options = options || {}
   var isolationLevel = options.ISOLATION_LEVEL || this.ISOLATION_LEVEL
-  return this.connect()
-    .then(function(connection) {
-      var transaction = new mssql.Transaction(connection)
-      var rolledBack = false
-      transaction.on('rollback', function() {
-        rolledBack = true
-      })
-      return transaction.begin(mssql.ISOLATION_LEVEL[isolationLevel])
-        .then(function() {
-          return fn(transaction)
-        })
-        .then(function(res) {
-          return transaction.commit()
-            .then(function() {
-              return res
-            })
-        })
-        .catch(function(err) {
-          if (!rolledBack) {
-            return transaction.rollback()
-              .then(function() {
-                throw err
-              })
-          }
-          throw err
-        })
+  return this.connect().then(function(connection) {
+    var transaction = new mssql.Transaction(connection)
+    var rolledBack = false
+    transaction.on('rollback', function() {
+      rolledBack = true
     })
+    return transaction
+      .begin(mssql.ISOLATION_LEVEL[isolationLevel])
+      .then(function() {
+        return fn(transaction)
+      })
+      .then(function(res) {
+        return transaction.commit().then(function() {
+          return res
+        })
+      })
+      .catch(function(err) {
+        if (!rolledBack) {
+          return transaction.rollback().then(function() {
+            throw err
+          })
+        }
+        throw err
+      })
+  })
 }
 
 const rolledBack = new WeakMap()
@@ -106,48 +104,48 @@ const rolledBack = new WeakMap()
 MssqlCrLayer.prototype.beginTransaction = function(options) {
   options = options || {}
   var isolationLevel = options.ISOLATION_LEVEL || this.ISOLATION_LEVEL
-  return this.connect()
-    .then(function(connection) {
-      var transaction = new mssql.Transaction(connection)
-      rolledBack.set(transaction, false)
-      transaction.on('rollback', function() {
-        rolledBack.set(transaction, true)
-      })
-      return transaction.begin(mssql.ISOLATION_LEVEL[isolationLevel])
-        .then(function() {
-          return transaction
-        })
+  return this.connect().then(function(connection) {
+    var transaction = new mssql.Transaction(connection)
+    rolledBack.set(transaction, false)
+    transaction.on('rollback', function() {
+      rolledBack.set(transaction, true)
     })
+    return transaction
+      .begin(mssql.ISOLATION_LEVEL[isolationLevel])
+      .then(function() {
+        return transaction
+      })
+  })
 }
 
 MssqlCrLayer.prototype.commit = function(transaction) {
-  return transaction.commit()
-    .catch(function(err) {
-      if (!rolledBack.get(transaction)) {
-        return transaction.rollback()
-          .then(function() {
-            throw err
-          })
-      }
-      throw err
-    })
+  return transaction.commit().catch(function(err) {
+    if (!rolledBack.get(transaction)) {
+      return transaction.rollback().then(function() {
+        throw err
+      })
+    }
+    throw err
+  })
 }
 
 MssqlCrLayer.prototype.rollback = function(transaction) {
-  return rolledBack.get(transaction) ? Promise.resolve() : transaction.rollback()
+  return rolledBack.get(transaction)
+    ? Promise.resolve()
+    : transaction.rollback()
 }
 
-const fold = record => { // tweak for node-mssql returning a array if you do a SELECT with a duplicate column name
-  Object.keys(record)
-    .forEach(key => {
-      const value = record[key]
-      if (Array.isArray(value) && value.length > 1) {
-        const first = record[key][0]
-        if (every(value, el => el === first)) {
-          record[key] = first
-        }
+const fold = record => {
+  // tweak for node-mssql returning a array if you do a SELECT with a duplicate column name
+  Object.keys(record).forEach(key => {
+    const value = record[key]
+    if (Array.isArray(value) && value.length > 1) {
+      const first = record[key][0]
+      if (every(value, el => el === first)) {
+        record[key] = first
       }
-    })
+    }
+  })
   return record
 }
 
@@ -159,14 +157,15 @@ const fold = record => { // tweak for node-mssql returning a array if you do a S
  */
 MssqlCrLayer.prototype.batch = function(script, options) {
   var transaction = options && options.transaction
-  return (transaction ? Promise.resolve(transaction) : this.connect())
-    .then(function(connection) {
-      return (new mssql.Request(connection))
+  return (transaction ? Promise.resolve(transaction) : this.connect()).then(
+    function(connection) {
+      return new mssql.Request(connection)
         .batch(script)
         .then(function({recordset}) {
           return recordset ? recordset.map(fold) : []
         })
-    })
+    }
+  )
 }
 
 /**
@@ -195,21 +194,22 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
   var transaction = options && options.transaction
   var connect = transaction ? Promise.resolve(transaction) : this.connect()
   if (params === void 0 || params === null) {
-    return connect
-      .then(function(connection) {
-        return (new mssql.Request(connection)).query(statement)
-          .then(function({recordset}) {
-            return recordset ? recordset.map(fold) : []
-          })
-      })
+    return connect.then(function(connection) {
+      return new mssql.Request(connection)
+        .query(statement)
+        .then(function({recordset}) {
+          return recordset ? recordset.map(fold) : []
+        })
+    })
   }
 
   var convertParams = function() {
     if (Array.isArray(params)) {
       var match = statement.match(/(\$\w*\b)/g)
-      assert((match && match.length || 0)
-             <= Object.keys(params).length, 'There are more ' +
-                                            'parameters in statement than in object params')
+      assert(
+        ((match && match.length) || 0) <= Object.keys(params).length,
+        'There are more ' + 'parameters in statement than in object params'
+      )
       var paramsObj = {}
       if (match) {
         match.map(function(param) {
@@ -233,15 +233,18 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
         if (typeof param === 'object' && !(param instanceof Date)) {
           input[key] = param && param.value !== void 0 ? param.value : null
           // Fix crash when inform a Date value and pass a string
-          if (input[key] !== null &&
-              (param.type === 'date' || param.type === 'datetime')
-              && !(input[key] instanceof Date)) {
+          if (
+            input[key] !== null &&
+            (param.type === 'date' || param.type === 'datetime') &&
+            !(input[key] instanceof Date)
+          ) {
             input[key] = new Date(input[key])
           }
           ps.input(key, getType(input[key], param))
         } else {
           input[key] = param !== void 0 ? param : null
-          if (input[key] instanceof Date) { // Fix mssql precision
+          if (input[key] instanceof Date) {
+            // Fix mssql precision
             input[key] = input[key].toISOString().substring(0, 23) + '000'
           }
           ps.input(key, getType(input[key]))
@@ -252,7 +255,8 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       return ps.prepare(statement)
     })
     .then(function() {
-      return ps.execute(input)
+      return ps
+        .execute(input)
         .then(function({recordset}) {
           return ps.unprepare().then(function() {
             return recordset ? recordset.map(fold) : []
@@ -325,12 +329,15 @@ function getType(value, param) {
 
 function decimalPlaces(num) {
   var match = ('' + num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/)
-  return match ? Math.max(
-    0,
-    // Number of digits right of decimal point.
-    (match[1] ? match[1].length : 0)
-    // Adjust for scientific notation.
-    - (match[2] ? +match[2] : 0)) : 0
+  return match
+    ? Math.max(
+        0,
+        // Number of digits right of decimal point.
+        (match[1] ? match[1].length : 0) -
+          // Adjust for scientific notation.
+          (match[2] ? +match[2] : 0)
+      )
+    : 0
 }
 
 function toMssqlConfig(config) {
@@ -346,7 +353,9 @@ function toMssqlConfig(config) {
       max: config.pool && config.pool.max,
       min: 0,
       idleTimeoutMillis: config.pool && config.pool.idleTimeout
+    },
+    options: {
+      encrypt: config.options && config.options.encrypt || false
     }
   }
 }
-

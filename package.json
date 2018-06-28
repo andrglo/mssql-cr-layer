@@ -1,13 +1,11 @@
 {
   "name": "mssql-cr-layer",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A MS SQL Server interface layer for common requests",
-  "homepage": "",
   "repository": "andrglo/mssql-cr-layer",
   "author": {
     "name": "Andre Gloria",
-    "email": "andredagloria@gmail.com",
-    "url": "andrglo.com"
+    "email": "andredagloria@gmail.com"
   },
   "files": [
     "src"
@@ -24,20 +22,22 @@
   ],
   "devDependencies": {
     "chai": "^4.0.0",
+    "eslint-config-google": "^0.9.1",
     "gulp": "^3.9.1",
     "gulp-coveralls": "^0.1.4",
-    "gulp-eslint": "^3.0.1",
+    "gulp-eslint": "^4.0.2",
     "gulp-istanbul": "^1.1.1",
     "gulp-mocha": "3.0.1",
-    "gulp-nsp": "^2.4.2"
+    "gulp-nsp": "^3.0.1"
   },
   "scripts": {
+    "ssh": "docker exec -it mssql-cr-layer_dms_1 fish",
     "prepublish": "gulp prepublish",
     "test": "gulp"
   },
   "license": "MIT",
   "dependencies": {
     "lodash.every": "^4.6.0",
-    "mssql": "^4.0.4"
+    "mssql": "^4.1.0"
   }
 }
