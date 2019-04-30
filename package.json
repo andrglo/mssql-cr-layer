@@ -1,6 +1,6 @@
 {
   "name": "mssql-cr-layer",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A MS SQL Server interface layer for common requests",
   "repository": "andrglo/mssql-cr-layer",
   "author": {
