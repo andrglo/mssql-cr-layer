@@ -1,6 +1,5 @@
 node_modules
 .idea
-yarn.lock
 .history
 .nyc_output
 yarn-error.log
