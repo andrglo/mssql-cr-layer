@@ -275,10 +275,11 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
  * @returns {Promise}
  */
 MssqlCrLayer.prototype.close = function() {
-  var promise = Promise.resolve()
-  this.connections.forEach(connection => {
-    promise = promise.then(() => connection.connection.close())
-  })
+  let promise = Promise.resolve()
+  if (this.connections) {
+    this.connections.forEach(connection => {
+      promise = promise.then(() => connection.connection.close())
+    })
   this.connections = null
   return promise
 }
