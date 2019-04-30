@@ -1,6 +1,7 @@
 node_modules
-coverage
 .idea
 yarn.lock
 .history
+.nyc_output
+yarn-error.log
 
