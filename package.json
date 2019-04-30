@@ -14,30 +14,27 @@
   "keywords": [
     "SQL Server",
     "mssql",
-    "promise",
     "sql",
     "common",
     "requests",
     "interface"
   ],
   "devDependencies": {
-    "chai": "^4.0.0",
-    "eslint-config-google": "^0.9.1",
-    "gulp": "^3.9.1",
-    "gulp-coveralls": "^0.1.4",
-    "gulp-eslint": "^4.0.2",
-    "gulp-istanbul": "^1.1.1",
-    "gulp-mocha": "3.0.1",
-    "gulp-nsp": "^3.0.1"
+    "chai": "^4.2.0",
+    "coveralls": "^3.0.3",
+    "eslint": "^5.16.0",
+    "eslint-config-google": "^0.12.0",
+    "mocha": "^6.1.4",
+    "nyc": "^14.0.0"
   },
   "scripts": {
-    "ssh": "docker exec -it mssql-cr-layer_dms_1 fish",
-    "prepublish": "gulp prepublish",
-    "test": "gulp"
+    "test": "nyc mocha --bail --exit --timeout 15000 test/index.js",
+    "test:report:coverage": "nyc report --reporter=text-lcov | coveralls",
+    "ssh": "docker exec -it mssql-cr-layer_dms_1 fish"
   },
   "license": "MIT",
   "dependencies": {
     "lodash.every": "^4.6.0",
-    "mssql": "^4.1.0"
+    "mssql": "^5.1.0"
   }
 }
