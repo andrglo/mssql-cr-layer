@@ -343,21 +343,19 @@ function decimalPlaces(num) {
 }
 
 function toMssqlConfig(config) {
-  config = config || {}
   return {
-    user: config.user,
-    database: config.database,
-    password: config.password,
-    port: config.port || 1433,
+    port: 1433,
     server: config.host || 'localhost',
-    requestTimeout: config.requestTimeout || 6000,
+    requestTimeout: 6000,
+    ...config || {},
     pool: {
-      max: config.pool && config.pool.max,
       min: 0,
-      idleTimeoutMillis: config.pool && config.pool.idleTimeout
+      ...config.pool || {}
     },
     options: {
-      encrypt: (config.options && config.options.encrypt) || false
+      encrypt: false,
+      enableArithAbort: false,
+      ...config.options || {},
     }
   }
 }
