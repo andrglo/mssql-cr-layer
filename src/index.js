@@ -15,7 +15,7 @@ module.exports = MssqlCrLayer
  * host: <host>,
  * pool: {
  *   max: <max pool size>,
- *   idleTimeoutMillis: <idle timeout in milliseconds>
+ *   idleTimeout: <idle timeout in milliseconds>
  * }
  *
  * @returns {MssqlCrLayer}
@@ -343,14 +343,13 @@ function decimalPlaces(num) {
 }
 
 function toMssqlConfig(config) {
-  return {
+  const mssqlConfig = {
     port: 1433,
     server: config.host || 'localhost',
     requestTimeout: 6000,
     ...config || {},
     pool: {
-      min: 0,
-      ...config.pool || {}
+      min: 0
     },
     options: {
       encrypt: false,
@@ -358,4 +357,12 @@ function toMssqlConfig(config) {
       ...config.options || {},
     }
   }
+  if (config.pool) {
+    mssqlConfig.pool = {...mssqlConfig.pool, ...config.pool}
+    if (mssqlConfig.pool.idleTimeout) {
+      mssqlConfig.pool.idleTimeoutMillis = mssqlConfig.pool.idleTimeout
+      delete mssqlConfig.pool.idleTimeout
+    }
+  }
+  return mssqlConfig
 }
