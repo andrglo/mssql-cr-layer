@@ -16,7 +16,7 @@ const config = {
   port: process.env.MSSQL_PORT || 1433,
   pool: {
     max: 25,
-    idleTimeout: 30000
+    idleTimeoutMillis: 30000
   },
   options: {
     enableArithAbort: true

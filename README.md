@@ -25,7 +25,7 @@ var config = {
   port: 1433,
   pool: {
     max: 25,
-    idleTimeout: 30000
+    idleTimeoutMillis: 30000
   }
 };
 

@@ -15,7 +15,7 @@ module.exports = MssqlCrLayer
  * host: <host>,
  * pool: {
  *   max: <max pool size>,
- *   idleTimeout: <idle timeout in milliseconds>
+ *   idleTimeoutMillis: <idle timeout in milliseconds>
  * }
  *
  * @returns {MssqlCrLayer}
