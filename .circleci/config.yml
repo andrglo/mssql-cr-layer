@@ -8,7 +8,7 @@ jobs:
         environment:
           NODE_ENV: test
           MSSQL_PASSWORD: Juriti01
-      - image: mcr.microsoft.com/mssql/server:2019-CU3-ubuntu-18.04
+      - image: mcr.microsoft.com/mssql/server:2019-CU11-ubuntu-20.04
         environment:
           ACCEPT_EULA: Y
           SA_PASSWORD: Juriti01

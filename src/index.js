@@ -324,6 +324,8 @@ function getType(value, param) {
       type = mssql.DateTime2
     } else if (typeof value === 'number') {
       type = mssql.Decimal(('' + value).length, decimalPlaces(value))
+    } else if (typeof value === 'boolean') {
+      type = mssql.Bit
     }
   }
   return type
