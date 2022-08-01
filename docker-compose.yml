@@ -3,8 +3,9 @@ version: '2'
 services:
 
   dms:
-    image: andrglo/everest:16.14.2
+    image: andrglo/everest:16.16.0
     hostname: mssql-cr-layer
+    container_name: mssql-cr-layer-dms-1
     command: tail -f /dev/null
     working_dir: /root/mssql-cr-layer
     volumes:
@@ -18,6 +19,7 @@ services:
 
   mssql:
     image: mcr.microsoft.com/mssql/server:2019-CU11-ubuntu-20.04
+    container_name: mssql-cr-layer-mssql-1
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Juriti01
