@@ -354,7 +354,7 @@ function toMssqlConfig(config) {
       min: 0
     },
     options: {
-      encrypt: false,
+      encrypt: config.encrypt || false,
       enableArithAbort: false,
       ...config.options || {},
     }
