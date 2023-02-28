@@ -43,7 +43,7 @@ jobs:
           name: Tests
           command: |
             npm test
-            npm test:report:coverage
+            npm run test:report:coverage
       - persist_to_workspace:
           root: ~/repo
           paths: .
