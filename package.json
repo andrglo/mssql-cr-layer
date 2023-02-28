@@ -1,6 +1,6 @@
 {
   "name": "mssql-cr-layer",
-  "version": "2.0.16",
+  "version": "2.0.17",
   "description": "A MS SQL Server interface layer for common requests",
   "repository": "andrglo/mssql-cr-layer",
   "author": {
@@ -20,11 +20,11 @@
     "interface"
   ],
   "devDependencies": {
-    "chai": "^4.3.6",
+    "chai": "^4.3.7",
     "coveralls": "^3.1.1",
-    "eslint": "^8.19.0",
+    "eslint": "^8.35.0",
     "eslint-config-google": "^0.14.0",
-    "mocha": "^10.0.0",
+    "mocha": "^10.2.0",
     "nyc": "^15.1.0"
   },
   "scripts": {
@@ -35,6 +35,6 @@
   "license": "MIT",
   "dependencies": {
     "lodash.every": "^4.6.0",
-    "mssql": "^8.1.2"
+    "mssql": "^9.1.1"
   }
 }
