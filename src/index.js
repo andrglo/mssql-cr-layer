@@ -272,11 +272,14 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
               })
             })
             .catch(function(error) {
-              debug('%s %O', statement, error)
               return ps.unprepare().then(function() {
                 throw error
               })
             })
+      })
+      .catch(err => {
+        debug('%s %O', statement, err)
+        throw err
       })
 }
 
