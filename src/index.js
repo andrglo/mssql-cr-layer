@@ -1,6 +1,7 @@
 const mssql = require('mssql')
 const assert = require('assert')
 const every = require('lodash.every')
+const debug = require('debug')('layer:mssql')
 
 const connectionParams = new WeakMap() // Hidden connection parameters
 
@@ -164,6 +165,10 @@ MssqlCrLayer.prototype.batch = function(script, options) {
             .then(function({recordset}) {
               return recordset ? recordset.map(fold) : []
             })
+            .catch(err => {
+              debug('%s %O', script, err)
+              throw err
+            })
       }
   )
 }
@@ -199,6 +204,10 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           .query(statement)
           .then(function({recordset}) {
             return recordset ? recordset.map(fold) : []
+          })
+          .catch(err => {
+            debug('%s %O', statement, err)
+            throw err
           })
     })
   }
@@ -263,6 +272,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
               })
             })
             .catch(function(error) {
+              debug('%s %O', statement, error)
               return ps.unprepare().then(function() {
                 throw error
               })
