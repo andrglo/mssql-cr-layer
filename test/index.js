@@ -509,7 +509,7 @@ describe('mssql cr layer', function() {
                 '2014-12-31',
                 {value: '2014-12-31T00:00:00Z', type: 'datetime', timezone: true},
                 {
-                  value: '2014-12-31T00:00:00',
+                  value: '2014-12-31T00:00:00Z',
                   type: 'datetime'
                 }
               ]
@@ -524,7 +524,7 @@ describe('mssql cr layer', function() {
                 49.99,
                 '2015-01-01',
                 '2015-01-01T00:00:00-01:00',
-                new Date('2014-12-31T23:00:00')
+                new Date('2014-12-31T23:00:00Z')
               ]
           )
         })
@@ -537,7 +537,7 @@ describe('mssql cr layer', function() {
                 49.99,
                 '2015-01-02',
                 '2015-01-01T00:00:00+01:00',
-                new Date('2015-01-01T01:00:00')
+                new Date('2015-01-01T01:00:00Z')
               ]
           )
         })
@@ -550,7 +550,7 @@ describe('mssql cr layer', function() {
                 49.99,
                 '2015-01-03',
                 '2015-01-01T00:00:00+02:00',
-                new Date('2015-01-01T02:00:00')
+                new Date('2015-01-01T02:00:00Z')
               ]
           )
         })
@@ -563,7 +563,7 @@ describe('mssql cr layer', function() {
                 49.99,
                 '2015-01-04',
                 '2015-01-01T00:00:00-02:00',
-                new Date('2014-12-31T22:00:00')
+                new Date('2014-12-31T22:00:00Z')
               ]
           )
         })
@@ -591,7 +591,7 @@ describe('mssql cr layer', function() {
               '2014-12-31T00:00:00.000Z'
           )
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2014-12-31T00:00:00').toISOString()
+              new Date('2014-12-31T00:00:00Z').toISOString()
           )
           record = recordset[1]
           expect(record.lastSale.toISOString().substr(0, 10)).to.equal(
@@ -601,7 +601,7 @@ describe('mssql cr layer', function() {
               '2015-01-01T01:00:00.000Z'
           )
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2014-12-31T23:00:00').toISOString()
+              new Date('2014-12-31T23:00:00Z').toISOString()
           )
           record = recordset[2]
           expect(record.lastSale.toISOString().substr(0, 10)).to.equal(
@@ -611,7 +611,7 @@ describe('mssql cr layer', function() {
               '2014-12-31T23:00:00.000Z'
           )
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2015-01-01T01:00:00').toISOString()
+              new Date('2015-01-01T01:00:00Z').toISOString()
           )
           record = recordset[3]
           expect(record.lastSale.toISOString().substr(0, 10)).to.equal(
@@ -621,7 +621,7 @@ describe('mssql cr layer', function() {
               '2014-12-31T22:00:00.000Z'
           )
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2015-01-01T02:00:00').toISOString()
+              new Date('2015-01-01T02:00:00Z').toISOString()
           )
           record = recordset[4]
           expect(record.lastSale.toISOString().substr(0, 10)).to.equal(
@@ -631,7 +631,7 @@ describe('mssql cr layer', function() {
               '2015-01-01T02:00:00.000Z'
           )
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2014-12-31T22:00:00').toISOString()
+              new Date('2014-12-31T22:00:00Z').toISOString()
           )
           record = recordset[5]
           expect(record.lastSale.toISOString().substr(0, 10)).to.equal(
@@ -696,10 +696,10 @@ describe('mssql cr layer', function() {
         )
         .then(function(recordset) {
           expect(recordset).to.be.a('array')
-          expect(recordset.length).to.equal(4)
+          expect(recordset.length).to.equal(3)
           const record = recordset[0]
           expect(record.updatedAt.toISOString()).to.equal(
-              new Date('2014-12-31T23:00:00').toISOString()
+              new Date('2015-01-01T01:00:00.000Z').toISOString()
           )
           done()
         })
