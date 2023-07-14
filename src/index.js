@@ -241,21 +241,9 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           const param = params[key]
           if (typeof param === 'object' && !(param instanceof Date)) {
             input[key] = param && param.value !== void 0 ? param.value : null
-            // Fix crash when inform a Date value and pass a string
-            if (
-              input[key] !== null &&
-            (param.type === 'date' || param.type === 'datetime') &&
-            !(input[key] instanceof Date)
-            ) {
-              input[key] = new Date(input[key])
-            }
             ps.input(key, getType(input[key], param))
           } else {
             input[key] = param !== void 0 ? param : null
-            if (input[key] instanceof Date) {
-            // Fix mssql precision
-              input[key] = input[key].toISOString().substring(0, 23) + '000'
-            }
             ps.input(key, getType(input[key]))
           }
         })
