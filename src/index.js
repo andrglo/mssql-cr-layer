@@ -321,10 +321,10 @@ function getType(value, param) {
         type = mssql.Date
         break
       case 'datetime':
-        if (param.timezone === 'ignore') {
-          type = mssql.DateTime2
-        } else {
+        if (param.timezone === true) {
           type = mssql.DateTimeOffset
+        } else {
+          type = mssql.DateTime2
         }
         break
       case 'string':

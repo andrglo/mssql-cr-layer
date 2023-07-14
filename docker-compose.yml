@@ -1,9 +1,9 @@
-version: '2'
+version: '3.9'
 
 services:
 
   dms:
-    image: andrglo/everest:18.14.2
+    image: andrglo/everest:latest
     hostname: mssql-cr-layer
     container_name: mssql-cr-layer-dms-1
     command: tail -f /dev/null

@@ -507,11 +507,10 @@ describe('mssql cr layer', function() {
                 'Pasta',
                 49.99,
                 '2014-12-31',
-                {value: '2014-12-31T00:00:00Z', type: 'datetime'},
+                {value: '2014-12-31T00:00:00Z', type: 'datetime', timezone: true},
                 {
                   value: '2014-12-31T00:00:00',
-                  type: 'datetime',
-                  timezone: 'ignore'
+                  type: 'datetime'
                 }
               ]
           )
@@ -693,7 +692,7 @@ describe('mssql cr layer', function() {
     layer2
         .query(
             'SELECT * FROM products WHERE updatedAt >= $1 ORDER BY updatedAt',
-            [new Date('2015-01-01T00:00:00+01:00')]
+            [new Date('2015-01-01T01:00:00Z')]
         )
         .then(function(recordset) {
           expect(recordset).to.be.a('array')
