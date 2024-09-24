@@ -4,7 +4,7 @@ jobs:
   test:
     working_directory: ~/repo
     docker:
-      - image: cimg/node:18.14.2
+      - image: cimg/node:20.17.0
         environment:
           NODE_ENV: test
           MSSQL_PASSWORD: Juriti01
@@ -43,7 +43,6 @@ jobs:
           name: Tests
           command: |
             npm test
-            npm run test:report:coverage
       - persist_to_workspace:
           root: ~/repo
           paths: .
@@ -51,7 +50,7 @@ jobs:
   publish:
     working_directory: ~/repo
     docker:
-      - image: cimg/node:18.14.2
+      - image: cimg/node:20.17.0
     steps:
       - attach_workspace:
           at: ~/repo

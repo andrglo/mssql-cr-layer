@@ -1,4 +1,4 @@
-# mssql-cr-layer [![NPM version][npm-image]][npm-url] [![Dependency Status][daviddm-image]][daviddm-url] [![CircleCI](https://circleci.com/gh/andrglo/mssql-cr-layer.svg?style=svg)](https://circleci.com/gh/andrglo/mssql-cr-layer) [![Coverage Status](https://coveralls.io/repos/github/andrglo/mssql-cr-layer/badge.svg?branch=master)](https://coveralls.io/github/andrglo/mssql-cr-layer?branch=master)
+# mssql-cr-layer [![NPM version][npm-image]][npm-url] [![Dependency Status][daviddm-image]][daviddm-url] [![CircleCI](https://circleci.com/gh/andrglo/mssql-cr-layer.svg?style=svg)](https://circleci.com/gh/andrglo/mssql-cr-layer) (https://coveralls.io/repos/github/andrglo/mssql-cr-layer/badge.svg?branch=master)](https://coveralls.io/github/andrglo/mssql-cr-layer?branch=master)
 
 > A MS SQL Server interface layer for common requests. It uses [mssql](https://github.com/patriksimek/node-mssql) to connect
 and wraps it in a tiny layer using ES2015 promises with the goal to be simpler and compatible with [pg](https://github.com/brianc/node-postgres)

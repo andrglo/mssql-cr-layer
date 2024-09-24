@@ -1,7 +1,4 @@
 const MssqlCrLayer = require('../src')
-const chai = require('chai')
-const expect = chai.expect
-chai.should()
 
 const databaseName = [
   'tests-mssql-cr-layer-1',
@@ -48,14 +45,20 @@ function createMssqlDb(dbName) {
   })
 }
 
+let expect
+
 before(function() {
-  return createMssqlDb(databaseName[0])
-      .then(function() {
-        return createMssqlDb(databaseName[1])
-      })
-      .then(function() {
-        return createMssqlDb(databaseName[2])
-      })
+  return import('chai').then(chai => {
+    chai.should()
+    expect = chai.expect
+    return createMssqlDb(databaseName[0])
+        .then(function() {
+          return createMssqlDb(databaseName[1])
+        })
+        .then(function() {
+          return createMssqlDb(databaseName[2])
+        })
+  })
 })
 
 describe('mssql cr layer', function() {

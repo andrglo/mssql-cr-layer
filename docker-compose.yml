@@ -18,7 +18,7 @@ services:
     restart: always
 
   mssql:
-    image: mcr.microsoft.com/mssql/server:2019-CU11-ubuntu-20.04
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-20.04
     container_name: mssql-cr-layer-mssql-1
     environment:
       - ACCEPT_EULA=Y
