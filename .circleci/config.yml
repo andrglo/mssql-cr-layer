@@ -4,7 +4,7 @@ jobs:
   test:
     working_directory: ~/repo
     docker:
-      - image: cimg/node:20.17.0
+      - image: cimg/node:23.9.0
         environment:
           NODE_ENV: test
           MSSQL_PASSWORD: Juriti01
@@ -50,7 +50,7 @@ jobs:
   publish:
     working_directory: ~/repo
     docker:
-      - image: cimg/node:20.17.0
+      - image: cimg/node:23.9.0
     steps:
       - attach_workspace:
           at: ~/repo
