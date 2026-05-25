@@ -34,5 +34,9 @@
     "debug": "^4.4.3",
     "lodash.every": "^4.6.0",
     "mssql": "^12.1.1"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5",
+    "diff": "^8.0.3"
   }
 }
