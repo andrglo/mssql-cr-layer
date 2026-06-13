@@ -5,6 +5,29 @@ const debug = require('debug')('layer:mssql')
 
 const connectionParams = new WeakMap() // Hidden connection parameters
 
+// Tag a DB error with the SQL + params that produced it, so error-alert
+// consumers can show what actually failed (drivers report code/number/state but
+// never the statement itself). Set-if-absent: the innermost runner wins and
+// outer wrappers never clobber a more specific capture. SQL is truncated so a
+// giant generated statement can't blow past downstream storage caps.
+const MAX_SQL_LENGTH = 4 * 1024
+
+function attachSqlToError(err, sql, params) {
+  if (!err || typeof err !== 'object') {
+    return err
+  }
+  if (err.sql == null && typeof sql === 'string') {
+    err.sql =
+      sql.length > MAX_SQL_LENGTH
+        ? sql.slice(0, MAX_SQL_LENGTH) + ' …(truncated)'
+        : sql
+  }
+  if (err.params == null && params != null) {
+    err.params = params
+  }
+  return err
+}
+
 module.exports = MssqlCrLayer
 
 /**
@@ -167,7 +190,7 @@ MssqlCrLayer.prototype.batch = function(script, options) {
             })
             .catch(err => {
               debug('%s %O', script, err)
-              throw err
+              throw attachSqlToError(err, script)
             })
       }
   )
@@ -207,7 +230,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
           })
           .catch(err => {
             debug('%s %O', statement, err)
-            throw err
+            throw attachSqlToError(err, statement)
           })
     })
   }
@@ -267,7 +290,7 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
       })
       .catch(err => {
         debug('%s %O', statement, err)
-        throw err
+        throw attachSqlToError(err, statement, params)
       })
 }
 

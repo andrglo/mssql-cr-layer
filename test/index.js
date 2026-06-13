@@ -461,6 +461,56 @@ describe('mssql cr layer', function() {
         })
         .catch(done)
   })
+  it('should attach sql to a rejected no-params query error in layer 1', function() {
+    return layer1
+        .query('SELECT * FROM no_such_table_xyz')
+        .then(function() {
+          throw new Error('No error?')
+        })
+        .catch(function(error) {
+          expect(error.message.indexOf('No error?')).to.equal(-1)
+          expect(error.sql).to.be.a('string')
+          expect(error.sql.indexOf('no_such_table_xyz') !== -1).to.equal(true)
+        })
+  })
+  it('should attach sql to a rejected batch error in layer 1', function() {
+    return layer1
+        .batch('SELECT * FROM no_such_table_batch')
+        .then(function() {
+          throw new Error('No error?')
+        })
+        .catch(function(error) {
+          expect(error.message.indexOf('No error?')).to.equal(-1)
+          expect(error.sql).to.be.a('string')
+          expect(error.sql.indexOf('no_such_table_batch') !== -1).to.equal(true)
+        })
+  })
+  it('should attach sql and params to a rejected query error inside a transaction in layer 1', function() {
+    return layer1
+        .transaction(function(t) {
+          return layer1.query(
+              'SELECT * FROM products WHERE no_such_column = $1',
+              [42],
+              {transaction: t}
+          )
+        })
+        .then(function() {
+          throw new Error('No error?')
+        })
+        .catch(function(error) {
+          expect(error.message.indexOf('No error?')).to.equal(-1)
+          expect(error.sql).to.be.a('string')
+          expect(error.sql.indexOf('no_such_column') !== -1).to.equal(true)
+          expect(error.params).to.not.equal(undefined)
+        })
+  })
+  it('should not add sql/params to a successful query in layer 1', function() {
+    return layer1.query('SELECT * FROM products').then(function(recordset) {
+      expect(recordset).to.be.a('array')
+      expect(recordset.sql).to.equal(undefined)
+      expect(recordset.params).to.equal(undefined)
+    })
+  })
   it('should not reject due extra parameters in statement in layer 1', function(done) {
     layer1
         .execute('INSERT INTO products ' + 'VALUES (8, \'Avocado\', 0.99)', {
