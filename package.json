@@ -1,6 +1,6 @@
 {
   "name": "mssql-cr-layer",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "A MS SQL Server interface layer for common requests",
   "repository": "andrglo/mssql-cr-layer",
   "author": {
@@ -37,6 +37,7 @@
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",
-    "diff": "^8.0.3"
+    "diff": "^8.0.3",
+    "brace-expansion": "^5.0.8"
   }
 }
