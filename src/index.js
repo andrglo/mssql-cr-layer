@@ -329,8 +329,18 @@ MssqlCrLayer.prototype.wrap = function(identifier) {
       'Invalid identifier: the NUL character is not allowed'
     )
   }
-  const open = this.delimiters[0]
-  const close = this.delimiters[1]
+  // delimiters is a prototype property a consumer can override. Read it once
+  // and check it here, at the point of use: anything but a two character
+  // string leaves close undefined or hijackable via Symbol.split, and the
+  // escape below silently becomes a no op
+  const delimiters = this.delimiters
+  if (typeof delimiters !== 'string' || delimiters.length !== 2) {
+    throw new Error(
+      'Invalid delimiters: a two character string is expected'
+    )
+  }
+  const open = delimiters[0]
+  const close = delimiters[1]
   return open + identifier.split(close).join(close + close) + close
 }
 

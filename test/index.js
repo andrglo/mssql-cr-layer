@@ -451,6 +451,50 @@ describe('mssql cr layer', function() {
           expect(recordset.length).to.equal(1)
         })
   })
+  it('should refuse to wrap when delimiters are not two characters', function() {
+    const attack = 'x] FROM films; DROP TABLE films --'
+    const oneChar = Object.create(MssqlCrLayer.prototype)
+    oneChar.delimiters = '['
+    let rendered = null
+    let thrown = null
+    try {
+      rendered = oneChar.wrap(attack)
+    } catch (error) {
+      thrown = error
+    }
+    expect(rendered).to.equal(null) // the break out was never rendered
+    expect(thrown).to.be.a('error')
+    expect(thrown.message.indexOf('Invalid delimiters') !== -1).to.equal(true)
+    const notAString = Object.create(MssqlCrLayer.prototype)
+    notAString.delimiters = [
+      '[',
+      {
+        [Symbol.split]: function(identifier) {
+          return [identifier]
+        },
+        toString: function() {
+          return ']'
+        }
+      }
+    ]
+    rendered = null
+    thrown = null
+    try {
+      rendered = notAString.wrap(attack)
+    } catch (error) {
+      thrown = error
+    }
+    expect(rendered).to.equal(null) // the break out was never rendered
+    expect(thrown).to.be.a('error')
+    expect(thrown.message.indexOf('Invalid delimiters') !== -1).to.equal(true)
+  })
+  it('should escape with any two character delimiters', function() {
+    expect(layer0.wrap('we]ird')).to.equal('[we]]ird]')
+    const quotes = Object.create(MssqlCrLayer.prototype)
+    quotes.delimiters = '""'
+    expect(quotes.wrap('we"ird')).to.equal('"we""ird"')
+    expect(quotes.wrap('abc')).to.equal('"abc"')
+  })
   it('should have postgres as dialect', function() {
     expect(layer0.dialect).to.equal('mssql')
   })
