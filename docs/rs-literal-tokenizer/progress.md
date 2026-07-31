@@ -89,3 +89,61 @@ the E-string backslash rule (`E'a''\'@name'`).
 |---|---|---|
 | mssql-cr-layer | 61 | **78** (17 new) |
 | pg-cr-layer | 63 | **80** (17 new) |
+
+Both re-confirmed green after the release commits, eslint clean in both.
+
+## 2026-07-31 — Step 7: json-schema-entity consumer gate — PASS
+Baseline (published 3.0.7 / 2.0.29) vs injected (modified layers), same jse snapshot:
+
+| run | layers | result |
+|---|---|---|
+| baseline | published | 637 passing / 12 pending / 0 failing |
+| injected x3 | modified | 637 / 12 / 0 |
+| restored | published | 637 / 12 / 0 |
+
+Beyond counts, a **per-test manifest** (all 649 status+title lines, timings stripped, order
+preserved) was diffed: baseline vs injected vs restored is **byte-identical — no test changed
+status**. `scan-markers.js` was proven *loaded at runtime* in both packages via `require.cache`, so
+the gate really exercised the new code. `node_modules` restored byte-identical (sha256 verified, no
+leftover `scan-markers.js`).
+
+Baseline deviated from the 624/5/0 figure in the brief: actual is **637/12/0**. Fully accounted for
+by jse's own uncommitted `test/schema-option-spec.js` (10 `it()`s x 2 dialects = 13 passing +
+7 pending; 624+13=637, 5+7=12). Zero failures, so the baseline was judged trustworthy. The 624/5
+figure simply predates that file.
+
+### Resolving my own concurrency hazard
+I had flagged the gate as untrustworthy because it copied `src/` while the break passes were
+mutating those files. Resolved with evidence rather than a re-run:
+
+- The gate injected mssql `scan-markers.js` at **3273 b** and pg at **4679 b**; the final pristine
+  files are byte-for-byte those exact sizes (sha256 `a2cfbd67…f5ac` / `7c5e0145…356b`).
+- Every mutation in flight during the gate window changes file size: the mssql pin builder's
+  `end > i + 1` → `end >= i + 1` is +1 b; the pg mutations are block deletions or `TAG_START`
+  widening (+3 b). None is size-preserving.
+- Neither pin builder touched `src/` at all — both added tests only — so `src/` at gate time already
+  equalled the final shipped source.
+- The gate's own clean-window check: last injected run 12:56:32, first unrelated jse source edit
+  12:57:12.
+
+**Decision: do not re-run.** A re-run now would execute against a jse tree that another agent is
+actively rewriting (`src/adapters/{postgres,mssql,common}.js` changed mid-gate), which is *worse*
+evidence than the original clean-window run, not better.
+
+### Caveat carried forward
+7 of jse's 12 pending tests are the security-relevant ones (`should reject a hostile schema on
+fetch/create/update/destroy`, `should reject a cast type carrying sql`, the dollar-sign schema
+specs). They are **skipped**, so this gate is a *compatibility* statement — it is not evidence that
+those hostile-input protections work. That is jse-side WIP, outside this workstream.
+
+## 2026-07-31 — Step 8: release — COMMITTED, STOPPED BEFORE PUSH
+Versions bumped on top of the existing security commits: mssql **3.0.8 → 3.0.9**, pg
+**2.0.30 → 2.0.31** (single-line diffs, no reformatting). Committed on `security/wrap-escape` in
+both repos:
+- mssql `bd6134e`
+- pg `59ae26a`
+
+**Not merged, not pushed.** Both repos publish from `.circleci/config.yml`: the `publish` job runs
+on `master` only, after `test`, and publishes whenever `package.json` differs from the published
+version. So pushing `master` *is* the npm release — an irreversible, outward-facing action.
+Escalated to the orchestrator rather than taken. Exact commands are in the handoff.
