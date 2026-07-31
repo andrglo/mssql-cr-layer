@@ -2,6 +2,7 @@ const mssql = require('mssql')
 const assert = require('assert')
 const every = require('lodash.every')
 const debug = require('debug')('layer:mssql')
+const scanMarkers = require('./scan-markers')
 
 const connectionParams = new WeakMap() // Hidden connection parameters
 
@@ -237,19 +238,23 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
 
   const convertParams = function() {
     if (Array.isArray(params)) {
-      const match = statement.match(/(\$\w*\b)/g)
+      const markers = scanMarkers(statement)
       assert(
-          ((match && match.length) || 0) <= Object.keys(params).length,
+          markers.length <= Object.keys(params).length,
           'There are more ' + 'parameters in statement than in object params'
       )
       const paramsObj = {}
-      if (match) {
-        match.map(function(param) {
-          const key = param.substr(1)
-          paramsObj['p' + key] = params[Number(key) - 1]
-          statement = statement.replace(param, '@p' + key)
-        })
-      }
+      // rewrite by position: replacing by token would hit the first
+      // occurrence anywhere in the statement, comments and literals included
+      let converted = ''
+      let last = 0
+      markers.forEach(function(marker) {
+        const key = marker.name
+        paramsObj['p' + key] = params[Number(key) - 1]
+        converted += statement.slice(last, marker.index) + '@p' + key
+        last = marker.index + marker.length
+      })
+      statement = converted + statement.slice(last)
       params = paramsObj
     }
   }

@@ -1162,6 +1162,169 @@ describe('mssql cr layer', function() {
           done(error)
         })
   })
+  describe('parameter markers outside of code context', function() {
+    before(function() {
+      return layer0.execute(
+          'CREATE TABLE marker_literals ( ' +
+        'id integer, ' +
+        'name varchar(50) )'
+      )
+    })
+
+    it('should insert a literal holding a marker lookalike and read it back byte identical', function() {
+      return layer0
+          .execute(
+              'INSERT INTO marker_literals (id, name) ' +
+            'VALUES ($1, \'Total R$100 a vista\')',
+              [1]
+          )
+          .then(function() {
+            return layer0.query(
+                'SELECT name FROM marker_literals WHERE id = $1',
+                [1]
+            )
+          })
+          .then(function(recordset) {
+            expect(recordset.length).to.equal(1)
+            expect(recordset[0].name).to.equal('Total R$100 a vista')
+          })
+    })
+    it('should not corrupt a marker lookalike when the params hide the extra match', function() {
+      return layer0
+          .query('SELECT $1 AS a, \'Total R$100 a vista\' AS b', [
+            'x',
+            'surplus'
+          ])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+            expect(recordset[0].b).to.equal('Total R$100 a vista')
+          })
+    })
+    it('should bind positional markers in order', function() {
+      return layer0
+          .query('SELECT $1 AS a, $2 AS b', ['one', 'two'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('one')
+            expect(recordset[0].b).to.equal('two')
+          })
+    })
+    it('should bind the same marker used twice', function() {
+      // each occurrence counts as a marker, so the statement needs as many
+      // params as occurrences even when they all point to the same value
+      return layer0
+          .query('SELECT $1 AS a, $1 AS b', ['same', 'unused'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('same')
+            expect(recordset[0].b).to.equal('same')
+          })
+    })
+    it('should leave a literal containing an at sign untouched', function() {
+      return layer0
+          .query('SELECT $1 AS a, \'contato@ayk.com.br\' AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+            expect(recordset[0].b).to.equal('contato@ayk.com.br')
+          })
+    })
+    it('should tell a genuine marker from a marker lookalike in the same statement', function() {
+      return layer0
+          .query('SELECT $1 AS a, \'paguei R$1 hoje\' AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+            expect(recordset[0].b).to.equal('paguei R$1 hoje')
+          })
+    })
+    it('should rewrite the marker by position when a lookalike comes first', function() {
+      // replacing by token would hit the lookalike, since it is the first
+      // occurrence of the token text in the statement
+      return layer0
+          .query('SELECT \'R$1 na conta\' AS a, $1 AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('R$1 na conta')
+            expect(recordset[0].b).to.equal('x')
+          })
+    })
+    it('should not end a literal at a doubled quote', function() {
+      return layer0
+          .query('SELECT $1 AS a, \'it\'\'s R$5\' AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+            expect(recordset[0].b).to.equal('it\'s R$5')
+          })
+    })
+    it('should recognize a marker right after a literal closes', function() {
+      return layer0
+          .query('SELECT \'R$9\' + \'\' AS a, $1 AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('R$9')
+            expect(recordset[0].b).to.equal('x')
+          })
+    })
+    it('should ignore a marker inside a line comment', function() {
+      return layer0
+          .query('SELECT $1 AS a -- not a param $2\n', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+          })
+    })
+    it('should ignore a marker inside a block comment', function() {
+      return layer0
+          .query('SELECT $1 AS a /* not a param $2 */', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+          })
+    })
+    it('should ignore a marker inside a nested block comment', function() {
+      return layer0
+          .query('SELECT $1 AS a /* a /* b $1 */ c $2 */', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+          })
+    })
+    it('should ignore a dollar sign inside a bracketed identifier', function() {
+      return layer0
+          .query('SELECT $1 AS [preço R$100]', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0]['preço R$100']).to.equal('x')
+          })
+    })
+    it('should not end a bracketed identifier at a doubled bracket', function() {
+      return layer0
+          .query('SELECT $1 AS [we]]ird R$2]', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0]['we]ird R$2']).to.equal('x')
+          })
+    })
+    it('should ignore a dollar sign inside a double quoted identifier', function() {
+      return layer0
+          .query('SELECT $1 AS "custo R$100"', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0]['custo R$100']).to.equal('x')
+          })
+    })
+    it('should not treat a dollar sign without a word character as a marker', function() {
+      return layer0
+          .query('SELECT $1 AS a, \'%R$%\' AS b', ['x'])
+          .then(function(recordset) {
+            expect(recordset[0].a).to.equal('x')
+            expect(recordset[0].b).to.equal('%R$%')
+          })
+    })
+    it('should not take a bare dollar sign in code as a marker', function() {
+      // a bare $ has no word character after the sigil, so it must not be
+      // reported as a zero-length marker - a T-SQL statement is not valid
+      // SQL here, so the scanner is exercised directly, as the pg sibling
+      // does for its dollar-quote-tag test
+      const scanMarkers = require('../src/scan-markers')
+      let markers = scanMarkers('SELECT $ AS a')
+      expect(markers.length).to.equal(0)
+      markers = scanMarkers('SELECT $1 AS a, $ + 1 AS b')
+      expect(markers.length).to.equal(1)
+      expect(markers[0].name).to.equal('1')
+      expect(markers[0].length).to.equal(2)
+    })
+  })
+
   after(function() {
     return layer0
         .close()
