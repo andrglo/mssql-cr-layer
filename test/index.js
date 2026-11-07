@@ -1,4 +1,5 @@
 const MssqlCrLayer = require('../src')
+const mssql = require('mssql')
 
 const databaseName = [
   'tests-mssql-cr-layer-1',
@@ -1228,6 +1229,21 @@ describe('mssql cr layer', function() {
           return small.query(sql, [cor], {transaction: t})
         })
       }
+      if (style === 'outside') {
+        // a node-mssql transaction the layer did not create
+        return small.connect().then(function(pool) {
+          const t = new mssql.Transaction(pool)
+          return t.begin().then(function() {
+            const insert = small.query(sql, [cor], {transaction: t})
+            return insert.catch(function(error) {
+              const rollback = t._aborted ? Promise.resolve() : t.rollback()
+              return rollback.then(function() {
+                throw error
+              })
+            })
+          })
+        })
+      }
       return small.beginTransaction().then(function(t) {
         return small.query(sql, [cor], {transaction: t}).catch(function(error) {
           return small.rollback(t).then(function() {
@@ -1243,6 +1259,20 @@ describe('mssql cr layer', function() {
     }
     const runSaves = function(cor, style, expected) {
       const seen = []
+      // Every save here is aborted by the server, so no statement bound to
+      // its transaction may send sp_unprepare: the connection is the pool's.
+      // The bystanders' own collisions are a race; this count is not.
+      let unprepareInTransaction = 0
+      const unprepare = mssql.PreparedStatement.prototype.unprepare
+      mssql.PreparedStatement.prototype.unprepare = function() {
+        if (this.parent instanceof mssql.Transaction) {
+          unprepareInTransaction++
+        }
+        return unprepare.apply(this, arguments)
+      }
+      const restore = function() {
+        mssql.PreparedStatement.prototype.unprepare = unprepare
+      }
       let chain = Promise.resolve()
       for (let i = 0; i < 20; i++) {
         chain = chain.then(function() {
@@ -1257,10 +1287,15 @@ describe('mssql cr layer', function() {
         })
       }
       return chain.then(function() {
+        restore()
         const wrong = seen.filter(m => m.indexOf(expected) === -1)
         expect(wrong).to.deep.equal([])
+        expect(unprepareInTransaction).to.equal(0)
         expect(bystanderErrors).to.deep.equal([])
         return small.query('SELECT count(*) AS n FROM abort_item', [])
+      }, function(err) {
+        restore()
+        throw err
       }).then(function(rows) {
         expect(rows[0].n).to.equal(0)
       })
@@ -1273,6 +1308,9 @@ describe('mssql cr layer', function() {
     })
     it('should keep the trigger error in a managed transaction', function() {
       return runSaves(null, 'managed', 'Cannot insert the value NULL')
+    })
+    it('should keep the trigger error in a transaction made outside the layer', function() {
+      return runSaves(null, 'outside', 'Cannot insert the value NULL')
     })
   })
 

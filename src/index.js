@@ -96,16 +96,8 @@ MssqlCrLayer.prototype.connect = function() {
  * @returns {Promise} With the return of the last promise executed
  */
 MssqlCrLayer.prototype.transaction = function(fn, options) {
-  options = options || {}
-  const isolationLevel = options.ISOLATION_LEVEL || this.ISOLATION_LEVEL
-  return this.connect().then(function(connection) {
-    const transaction = new mssql.Transaction(connection)
-    rolledBack.set(transaction, false)
-    transaction.on('rollback', function() {
-      rolledBack.set(transaction, true)
-    })
-    return transaction
-        .begin(mssql.ISOLATION_LEVEL[isolationLevel])
+  return this.beginTransaction(options).then(function(transaction) {
+    return Promise.resolve()
         .then(function() {
           return fn(transaction)
         })
@@ -293,18 +285,23 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
               // so it is no longer this statement's to unprepare on - another
               // request may be using it, and the sp_unprepare would collide
               // with it ("Requests can only be made in the LoggedIn state").
-              if (transaction && rolledBack.get(transaction)) {
+              // `_aborted` is node-mssql's own flag, for a transaction this
+              // layer did not create.
+              if (
+                transaction &&
+                (rolledBack.get(transaction) || transaction._aborted === true)
+              ) {
                 throw error
               }
               // Never let a failed unprepare replace the statement's own error
-              return ps.unprepare().then(
-                  function() {
+              return ps
+                  .unprepare()
+                  .catch(function(unprepareError) {
+                    debug('unprepare failed %s %O', statement, unprepareError)
+                  })
+                  .then(function() {
                     throw error
-                  },
-                  function() {
-                    throw error
-                  }
-              )
+                  })
             })
       })
       .catch(err => {
