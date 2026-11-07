@@ -5,6 +5,7 @@ const debug = require('debug')('layer:mssql')
 const scanMarkers = require('./scan-markers')
 
 const connectionParams = new WeakMap() // Hidden connection parameters
+const rolledBack = new WeakMap() // transaction -> rolled back (by us or by the server)
 
 // Tag a DB error with the SQL + params that produced it, so error-alert
 // consumers can show what actually failed (drivers report code/number/state but
@@ -99,9 +100,9 @@ MssqlCrLayer.prototype.transaction = function(fn, options) {
   const isolationLevel = options.ISOLATION_LEVEL || this.ISOLATION_LEVEL
   return this.connect().then(function(connection) {
     const transaction = new mssql.Transaction(connection)
-    let rolledBack = false
+    rolledBack.set(transaction, false)
     transaction.on('rollback', function() {
-      rolledBack = true
+      rolledBack.set(transaction, true)
     })
     return transaction
         .begin(mssql.ISOLATION_LEVEL[isolationLevel])
@@ -114,7 +115,7 @@ MssqlCrLayer.prototype.transaction = function(fn, options) {
           })
         })
         .catch(function(err) {
-          if (!rolledBack) {
+          if (!rolledBack.get(transaction)) {
             return transaction.rollback().then(function() {
               throw err
             })
@@ -123,8 +124,6 @@ MssqlCrLayer.prototype.transaction = function(fn, options) {
         })
   })
 }
-
-const rolledBack = new WeakMap()
 
 MssqlCrLayer.prototype.beginTransaction = function(options) {
   options = options || {}
@@ -288,9 +287,24 @@ MssqlCrLayer.prototype.query = function(statement, params, options) {
               })
             })
             .catch(function(error) {
-              return ps.unprepare().then(function() {
+              // The server rolled the transaction back while this statement ran
+              // (an error inside a trigger, XACT_ABORT, a trigger ROLLBACK):
+              // node-mssql has already handed the connection back to the pool,
+              // so it is no longer this statement's to unprepare on - another
+              // request may be using it, and the sp_unprepare would collide
+              // with it ("Requests can only be made in the LoggedIn state").
+              if (transaction && rolledBack.get(transaction)) {
                 throw error
-              })
+              }
+              // Never let a failed unprepare replace the statement's own error
+              return ps.unprepare().then(
+                  function() {
+                    throw error
+                  },
+                  function() {
+                    throw error
+                  }
+              )
             })
       })
       .catch(err => {

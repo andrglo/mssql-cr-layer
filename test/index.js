@@ -1162,6 +1162,120 @@ describe('mssql cr layer', function() {
           done(error)
         })
   })
+  describe('a transaction the server rolls back while other requests use the pool', function() {
+    // When SQL Server rolls a transaction back in the middle of a statement (an
+    // error inside a trigger, a trigger ROLLBACK, a deadlock), node-mssql hands
+    // the connection back to the pool at once. The failed prepared statement
+    // must not send its sp_unprepare on it afterwards: a request waiting for a
+    // connection may already be using it, and the collision used to replace
+    // the statement's own error with "Requests can only be made in the
+    // LoggedIn state, not the SentClientRequest state".
+    // A pool of 2 with 4 requests always waiting makes the race deterministic.
+    let small
+    let stop
+    let bystanders
+    let bystanderErrors
+    before(function() {
+      small = new MssqlCrLayer({
+        ...config,
+        database: databaseName[2],
+        pool: {max: 2, idleTimeout: 30000}
+      })
+      return small
+          .batch(
+              'CREATE TABLE abort_item (id int identity primary key, cor varchar(10) NULL);' +
+          'CREATE TABLE abort_stock (id int identity primary key, cor varchar(10) NOT NULL)'
+          )
+          .then(function() {
+            return small.batch(
+                'CREATE TRIGGER abort_item_null ON abort_item AFTER INSERT AS ' +
+            'BEGIN SET NOCOUNT ON; ' +
+            'IF EXISTS (SELECT 1 FROM inserted WHERE cor = \'refuse\') ' +
+            'BEGIN RAISERROR(\'Refused by the trigger\', 16, 1); ROLLBACK TRANSACTION; RETURN END; ' +
+            'INSERT INTO abort_stock (cor) SELECT cor FROM inserted END'
+            )
+          })
+    })
+    beforeEach(function() {
+      stop = false
+      bystanderErrors = []
+      bystanders = Array.from({length: 4}, function() {
+        const loop = function() {
+          if (stop) {
+            return Promise.resolve()
+          }
+          return small
+              .query('SELECT $1 AS x', [1])
+              .catch(function(error) {
+                bystanderErrors.push(error.message)
+              })
+              .then(loop)
+        }
+        return loop()
+      })
+    })
+    afterEach(function() {
+      stop = true
+      return Promise.all(bystanders)
+    })
+    after(function() {
+      return small.close()
+    })
+    const failingInsert = function(cor, style) {
+      const sql = 'INSERT INTO abort_item (cor) VALUES ($1)'
+      if (style === 'managed') {
+        return small.transaction(function(t) {
+          return small.query(sql, [cor], {transaction: t})
+        })
+      }
+      return small.beginTransaction().then(function(t) {
+        return small.query(sql, [cor], {transaction: t}).catch(function(error) {
+          return small.rollback(t).then(function() {
+            throw error
+          })
+        })
+      })
+    }
+    const messagesOf = function(error) {
+      return [error.message]
+          .concat((error.precedingErrors || []).map(e => e.message))
+          .join(' | ')
+    }
+    const runSaves = function(cor, style, expected) {
+      const seen = []
+      let chain = Promise.resolve()
+      for (let i = 0; i < 20; i++) {
+        chain = chain.then(function() {
+          return failingInsert(cor, style).then(
+              function() {
+                seen.push('committed')
+              },
+              function(error) {
+                seen.push(messagesOf(error))
+              }
+          )
+        })
+      }
+      return chain.then(function() {
+        const wrong = seen.filter(m => m.indexOf(expected) === -1)
+        expect(wrong).to.deep.equal([])
+        expect(bystanderErrors).to.deep.equal([])
+        return small.query('SELECT count(*) AS n FROM abort_item', [])
+      }).then(function(rows) {
+        expect(rows[0].n).to.equal(0)
+      })
+    }
+    it('should keep the trigger error when the server aborts the transaction', function() {
+      return runSaves(null, 'step', 'Cannot insert the value NULL')
+    })
+    it('should keep the trigger refusal when the trigger rolls the transaction back', function() {
+      return runSaves('refuse', 'step', 'Refused by the trigger')
+    })
+    it('should keep the trigger error in a managed transaction', function() {
+      return runSaves(null, 'managed', 'Cannot insert the value NULL')
+    })
+  })
+
   describe('parameter markers outside of code context', function() {
     before(function() {
       return layer0.execute(

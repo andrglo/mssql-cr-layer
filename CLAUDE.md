@@ -31,7 +31,8 @@ CI (`.circleci/config.yml`) runs the same `npm test` against a sibling MSSQL con
   - No params → plain `mssql.Request().query()`.
   - Array params → `$1, $2, ...` placeholders are rewritten to `@p1, @p2, ...` and bound positionally.
   - Object params → `@key` placeholders bound by name. A value can be a raw scalar or `{value, type, maxLength, decimals, timezone}` for explicit typing.
-  - Object/array params go through a `PreparedStatement` (prepare → execute → unprepare, always unprepared even on error).
+  - Object/array params go through a `PreparedStatement` (prepare → execute → unprepare, unprepared even on error — except after the server rolled the statement's transaction back, see below). A failed unprepare never replaces the statement's own error.
+  - ⚠️ **A transaction the server rolls back mid-statement** (an error inside a trigger, a trigger `ROLLBACK`, a deadlock, `XACT_ABORT`): node-mssql's `Transaction._abort` hands the connection back to the POOL immediately, while the failed prepared statement still holds it. Sending `sp_unprepare` then collides with whichever request the pool gave the connection to, and one side fails with `Requests can only be made in the LoggedIn state, not the SentClientRequest state` (before 3.0.14 it was the statement itself, its real error lost). So the query skips the unprepare when the `rolledBack` map says the transaction is gone; the cost is one stale prepared handle on that connection until it closes. Pinned by `a transaction the server rolls back while other requests use the pool` (pool of 2, 4 waiting requests).
 
 - **`batch`** runs a raw multi-statement script via `mssql.Request().batch()` with no parameter binding — use it for DDL / scripts, `query` for parameterized statements.
 
